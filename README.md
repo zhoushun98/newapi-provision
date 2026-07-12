@@ -7,7 +7,7 @@
 - `seed.json` — 权威配置数据（从线上实例导出，可按需修改）：
   - 5 个供应商（OpenAI、Anthropic、DeepSeek、智谱、xAI，含图标）
   - 18 个模型的元信息：名称、供应商归属、图标、标签、简介、端点、匹配类型
-  - 计费：`ModelRatio` / `CompletionRatio` / `CacheRatio` / `CreateCacheRatio`（14 个模型的倍率），以及 5 个 GPT 模型的 272K 长上下文阶梯表达式（`billing_setting.*`）
+  - 计费：`ModelRatio` / `CompletionRatio` / `CacheRatio` / `CreateCacheRatio`（18 个模型的倍率），以及 6 个阶梯表达式模型（`billing_setting.*`）：5 个 GPT 模型的 272K 长上下文分档 + deepseek-v4-pro 的单档精确价（倍率除不尽，用表达式写绝对价）
 - `provision.py` — 幂等灌入脚本，标准库实现，无依赖
 
 ## 用法
@@ -34,6 +34,8 @@ python3 provision.py --base-url http://目标机:3000 --token <访问令牌> --r
 
 - **供应商自动创建**：全新系统的供应商列表是空的，脚本会按 seed 自动补齐（按名称查重，已存在的不动、不覆盖你的手工修改）；早前以未绑定状态创建的模型会在重跑时自动补上供应商归属。
 - **渠道不在种子范围内**（含上游密钥，不适合进仓库）——新系统需自行添加渠道，模型与渠道的绑定会自动关联。
+- **币种约定**：国外模型（GPT / Claude / grok）按官方美元价，DeepSeek / GLM 按国内官方人民币价（flash ¥1/¥2、pro ¥3/¥6、glm-5.2 ¥8/¥28/命中¥2），数字直入、系统不做汇率换算。
+- `grok-4.5` 只配标准价（$2/$6）：官方页确认超 200K 上下文有不同费率，但具体数字无法从官方一手来源核实，故不配长上下文阶梯。
 - `claude-sonnet-5` 倍率 1（$2/$10）是官方限时价，**2026-08-31 后改为 1.5**（$3/$15），届时更新 `seed.json` 并重跑即可（合并逻辑会检测到差异并写入）。
 - 分组倍率（GroupRatio）、按次计费模型（如 gpt-image-2）不在种子内；需要时往 `seed.json` 的 `options_merge` 里加对应键即可。
 - 配置有变化时，重新从线上导出或直接改 `seed.json`，然后对所有实例重跑一遍。

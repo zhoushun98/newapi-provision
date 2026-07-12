@@ -279,7 +279,6 @@
       "gpt-5.6-sol": "tiered_expr",
       "gpt-5.6-terra": "tiered_expr",
       "gpt-5.6-luna": "tiered_expr",
-      "grok-4.5": "tiered_expr",
       "deepseek-v4-pro": "tiered_expr"
     },
     "billing_setting.billing_expr": {
@@ -288,7 +287,6 @@
       "gpt-5.6-sol": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1 + cc * 12.5)",
       "gpt-5.6-terra": "len <= 272000\n  ? tier(\"standard\", p * 2.5 + c * 15 + cr * 0.25 + cc * 3.125)\n  : tier(\"long_context\", p * 5 + c * 22.5 + cr * 0.5 + cc * 6.25)",
       "gpt-5.6-luna": "len <= 272000\n  ? tier(\"standard\", p * 1 + c * 6 + cr * 0.1 + cc * 1.25)\n  : tier(\"long_context\", p * 2 + c * 9 + cr * 0.2 + cc * 2.5)",
-      "grok-4.5": "len <= 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
       "deepseek-v4-pro": "tier(\"base\", p * 3 + c * 6 + cr * 0.025)"
     },
     "ModelPrice": {}
