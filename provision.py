@@ -2,7 +2,8 @@
 """new-api 一键配置脚本：按 seed.json 灌入 模型元信息 → 计费配置。
 
 幂等设计，可反复执行：
-  - 模型：按名称查重，已存在则跳过
+  - 模型：按名称查重，已存在则跳过；若已存在但供应商绑定与 seed 不符
+    （如首跑时供应商还没建，模型以未绑定状态创建），会自动补绑定
   - 计费选项（ModelRatio 等）默认「合并」：只增改 seed 中的条目，
     不覆盖目标系统已有的其他模型条目
   - 加 --reset-pricing 则为「清空重置」：定价类选项整体替换为 seed 的精确状态，
@@ -69,16 +70,29 @@ def main():
     for name in sorted(missing):
         print(f"提示: 目标系统没有供应商「{name}」，相关模型将不绑定供应商（请自行在 UI 创建后重跑）")
 
-    # 2. 模型元信息：按名称查重，缺失则创建
+    # 2. 模型元信息：按名称查重，缺失则创建；已存在但供应商绑定不符则补绑定
     page = call("GET", "/api/models/search?keyword=&p=1&page_size=200")
-    existing_models = {m["model_name"] for m in page["items"]}
+    existing_models = {m["model_name"]: m for m in page["items"]}
     for m in seed["models"]:
-        if m["model_name"] in existing_models:
-            print(f"模型已存在，跳过: {m['model_name']}")
+        want_vendor = vendor_ids.get(m.get("vendor", ""), 0)
+        exist = existing_models.get(m["model_name"])
+        if exist:
+            if want_vendor and exist.get("vendor_id") != want_vendor:
+                if args.dry_run:
+                    print(f"[dry-run] 将补绑定供应商: {m['model_name']} → {m['vendor']}")
+                    continue
+                full = call("GET", f"/api/models/{exist['id']}")
+                full["vendor_id"] = want_vendor
+                for k in ("bound_channels", "enable_groups", "quota_types", "created_time", "updated_time"):
+                    full.pop(k, None)
+                call("PUT", "/api/models/", full)
+                print(f"已补绑定供应商: {m['model_name']} → {m['vendor']}")
+            else:
+                print(f"模型已存在，跳过: {m['model_name']}")
             continue
         body = {
             "model_name": m["model_name"],
-            "vendor_id": vendor_ids.get(m["vendor"], 0),
+            "vendor_id": want_vendor,
             "icon": m.get("icon", ""),
             "endpoints": m.get("endpoints", ""),
             "tags": m.get("tags", ""),
