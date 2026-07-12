@@ -1,4 +1,26 @@
 {
+  "vendors": [
+    {
+      "name": "OpenAI",
+      "icon": "OpenAI"
+    },
+    {
+      "name": "Anthropic",
+      "icon": "Claude.Color"
+    },
+    {
+      "name": "DeepSeek",
+      "icon": "DeepSeek.Color"
+    },
+    {
+      "name": "智谱",
+      "icon": "Zhipu.Color"
+    },
+    {
+      "name": "xAI",
+      "icon": "Grok"
+    }
+  ],
   "models": [
     {
       "model_name": "gpt-5.6-sol",

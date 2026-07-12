@@ -9,8 +9,7 @@
   - 加 --reset-pricing 则为「清空重置」：定价类选项整体替换为 seed 的精确状态，
     seed 之外的旧条目（如系统出厂默认的一大堆过时模型倍率）全部清掉，
     并将 options_reset_extra 列出的键（图片/音频倍率等）清为空表
-  - 供应商：不创建、不修改（自行在 UI 维护）；仅按名称只读查询用于模型绑定，
-    查不到则该模型不绑定供应商并给出提示
+  - 供应商：按名称查重，缺失则连同图标一起创建；已存在的不做修改
 
 用法：
   python3 provision.py --base-url http://目标机:3000 --token <管理员访问令牌> [--user-id 1] [--dry-run]
@@ -63,12 +62,19 @@ def main():
     def call(method, path, body=None):
         return api(args.base_url, args.token, args.user_id, method, path, body)
 
-    # 1. 供应商：只读查询，用于把 seed 里的供应商名解析成目标系统的 id（不创建、不修改）
+    # 1. 供应商：按名称查重，缺失则创建（含图标）；已存在的不做修改
     existing = call("GET", "/api/vendors/?p=1&page_size=100")["items"]
     vendor_ids = {v["name"]: v["id"] for v in existing}
-    missing = {m["vendor"] for m in seed["models"] if m.get("vendor") and m["vendor"] not in vendor_ids}
-    for name in sorted(missing):
-        print(f"提示: 目标系统没有供应商「{name}」，相关模型将不绑定供应商（请自行在 UI 创建后重跑）")
+    for v in seed.get("vendors", []):
+        if v["name"] in vendor_ids:
+            print(f"供应商已存在，跳过: {v['name']}")
+            continue
+        if args.dry_run:
+            print(f"[dry-run] 将创建供应商: {v['name']}")
+            continue
+        created = call("POST", "/api/vendors/", {"name": v["name"], "icon": v.get("icon", ""), "status": 1})
+        vendor_ids[v["name"]] = created["id"]
+        print(f"已创建供应商: {v['name']} (id={created['id']})")
 
     # 2. 模型元信息：按名称查重，缺失则创建；已存在但供应商绑定不符则补绑定
     page = call("GET", "/api/models/search?keyword=&p=1&page_size=200")
