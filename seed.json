@@ -98,7 +98,17 @@
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
       "tags": "Reasoning,Tools,Vision,1M",
-      "description": "Anthropic 最强模型：最高难度推理与长程智能体任务",
+      "description": "Anthropic 最强模型：最高难度推理与长程智能体任务（思考常开）",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
+      "model_name": "claude-opus-5",
+      "vendor": "Anthropic",
+      "icon": "Claude.Color",
+      "endpoints": "[\"anthropic\", \"openai\"]",
+      "tags": "Reasoning,Tools,Vision,1M",
+      "description": "当前 Opus：复杂智能体编码与企业级工作，与 4.8 同价",
       "status": 1,
       "name_rule": 0
     },
@@ -108,7 +118,7 @@
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
       "tags": "Reasoning,Tools,Vision,1M",
-      "description": "最强 Opus 档：长程智能体执行、知识工作与记忆",
+      "description": "上一代 Opus：长程智能体执行、知识工作与记忆",
       "status": 1,
       "name_rule": 0
     },
@@ -118,7 +128,7 @@
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
       "tags": "Reasoning,Tools,Vision,1M",
-      "description": "上一代 Opus：长程智能体、视觉与记忆能力强",
+      "description": "旧版 Opus：长程智能体、视觉与记忆能力强",
       "status": 1,
       "name_rule": 0
     },
@@ -128,7 +138,7 @@
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
       "tags": "Reasoning,Tools,Vision,1M",
-      "description": "Opus 4.6：支持自适应思考的旗舰模型",
+      "description": "旧版 Opus：首代支持自适应思考",
       "status": 1,
       "name_rule": 0
     },
@@ -138,7 +148,7 @@
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
       "tags": "Reasoning,Tools,Vision,1M",
-      "description": "Sonnet 5：以 Sonnet 价格获得接近 Opus 的编码与智能体能力",
+      "description": "当前 Sonnet：速度与智能兼顾，以 Sonnet 价格获得接近 Opus 的编码与智能体能力",
       "status": 1,
       "name_rule": 0
     },
@@ -158,7 +168,7 @@
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
       "tags": "Fast,Tools,Vision,200K",
-      "description": "最快、最省的 Claude，适合简单任务",
+      "description": "当前 Haiku：最快、最省的 Claude，适合简单任务",
       "status": 1,
       "name_rule": 0
     },
@@ -215,6 +225,7 @@
       "claude-opus-4-6": 2.5,
       "claude-opus-4-7": 2.5,
       "claude-opus-4-8": 2.5,
+      "claude-opus-5": 2.5,
       "claude-sonnet-5": 1,
       "claude-sonnet-4-6": 1.5,
       "codex-auto-review": 2.5,
@@ -235,6 +246,7 @@
       "claude-opus-4-6": 5,
       "claude-opus-4-7": 5,
       "claude-opus-4-8": 5,
+      "claude-opus-5": 5,
       "claude-sonnet-5": 5,
       "claude-sonnet-4-6": 5,
       "codex-auto-review": 6,
@@ -255,6 +267,7 @@
       "claude-opus-4-6": 0.1,
       "claude-opus-4-7": 0.1,
       "claude-opus-4-8": 0.1,
+      "claude-opus-5": 0.1,
       "claude-sonnet-5": 0.1,
       "claude-sonnet-4-6": 0.1,
       "codex-auto-review": 0.1,
@@ -266,6 +279,7 @@
     },
     "CreateCacheRatio": {
       "claude-fable-5": 1.25,
+      "claude-opus-5": 1.25,
       "claude-opus-4-8": 1.25,
       "claude-opus-4-7": 1.25,
       "claude-opus-4-6": 1.25,
