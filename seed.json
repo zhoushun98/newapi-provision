@@ -9,14 +9,6 @@
       "icon": "Claude.Color"
     },
     {
-      "name": "DeepSeek",
-      "icon": "DeepSeek.Color"
-    },
-    {
-      "name": "智谱",
-      "icon": "Zhipu.Color"
-    },
-    {
       "name": "xAI",
       "icon": "Grok"
     }
@@ -193,36 +185,6 @@
       "name_rule": 0
     },
     {
-      "model_name": "deepseek-v4-flash",
-      "vendor": "DeepSeek",
-      "icon": "DeepSeek.Color",
-      "endpoints": "[\"openai\"]",
-      "tags": "Fast,Tools,1M",
-      "description": "DeepSeek V4 轻量档：极致性价比，支持思考/非思考双模式",
-      "status": 1,
-      "name_rule": 0
-    },
-    {
-      "model_name": "deepseek-v4-pro",
-      "vendor": "DeepSeek",
-      "icon": "DeepSeek.Color",
-      "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Tools,1M",
-      "description": "DeepSeek V4 高配档：旗舰推理能力，成本极低",
-      "status": 1,
-      "name_rule": 0
-    },
-    {
-      "model_name": "glm-5.2",
-      "vendor": "智谱",
-      "icon": "Zhipu.Color",
-      "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Coding,Tools,1M",
-      "description": "智谱旗舰：编码与智能体表现强",
-      "status": 1,
-      "name_rule": 0
-    },
-    {
       "model_name": "grok-4.6",
       "vendor": "xAI",
       "icon": "Grok",
@@ -262,9 +224,6 @@
       "claude-sonnet-4-6": 1.5,
       "codex-auto-review": 2.5,
       "claude-haiku-4-5-20251001": 0.5,
-      "deepseek-v4-flash": 0.5,
-      "deepseek-v4-pro": 1.5,
-      "glm-5.2": 4,
       "grok-4.5": 1,
       "grok-4.6": 1
     },
@@ -286,9 +245,6 @@
       "claude-sonnet-4-6": 5,
       "codex-auto-review": 6,
       "claude-haiku-4-5-20251001": 5,
-      "deepseek-v4-flash": 2,
-      "deepseek-v4-pro": 2,
-      "glm-5.2": 3.5,
       "grok-4.5": 3,
       "grok-4.6": 3
     },
@@ -310,9 +266,6 @@
       "claude-sonnet-4-6": 0.1,
       "codex-auto-review": 0.1,
       "claude-haiku-4-5-20251001": 0.1,
-      "deepseek-v4-flash": 0.02,
-      "deepseek-v4-pro": 0.008333,
-      "glm-5.2": 0.25,
       "grok-4.5": 0.15,
       "grok-4.6": 0.25
     },
@@ -335,8 +288,7 @@
       "gpt-5.6-terra": "tiered_expr",
       "gpt-5.6-luna": "tiered_expr",
       "grok-4.6": "tiered_expr",
-      "grok-4.5": "tiered_expr",
-      "deepseek-v4-pro": "tiered_expr"
+      "grok-4.5": "tiered_expr"
     },
     "billing_setting.billing_expr": {
       "gpt-6-astra": "len <= 272000\n  ? tier(\"standard\", p * 10 + c * 50 + cr * 1 + cc * 12.5)\n  : tier(\"long_context\", p * 20 + c * 75 + cr * 2 + cc * 25)",
@@ -346,8 +298,7 @@
       "gpt-5.6-terra": "len <= 272000\n  ? tier(\"standard\", p * 2 + c * 12 + cr * 0.2 + cc * 2.5)\n  : tier(\"long_context\", p * 4 + c * 18 + cr * 0.4 + cc * 5)",
       "gpt-5.6-luna": "len <= 272000\n  ? tier(\"standard\", p * 0.2 + c * 1.2 + cr * 0.02 + cc * 0.25)\n  : tier(\"long_context\", p * 0.4 + c * 1.8 + cr * 0.04 + cc * 0.5)",
       "grok-4.6": "len <= 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
-      "grok-4.5": "len <= 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.3)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 0.6)",
-      "deepseek-v4-pro": "tier(\"base\", p * 3 + c * 6 + cr * 0.025)"
+      "grok-4.5": "len <= 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.3)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 0.6)"
     },
     "ModelPrice": {}
   },
