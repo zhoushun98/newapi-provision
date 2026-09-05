@@ -71,13 +71,21 @@ new-api 的 `ModelRatio` 以 **$2/MTok 为 1 倍**，即：
 
 ## 数据纪律（历史上踩过的坑）
 
-- **定价必须能从官方一手来源核实**，核不到的档位就不配，退回能核实的标准价。两次回退：`grok-4.5` 长上下文阶梯因高档价无法核实而撤销（`8a6e978`）；`glm-5.2` 误用了 GLM-5.1 的 ¥6/¥24 档（`6c998dc`）。查 Anthropic 价格用 `platform.claude.com/docs/en/about-claude/pricing.md`（注意 `/docs/en/pricing.md` 是 404）。
+- **定价必须能从官方一手来源核实**，核不到的档位就不配，退回能核实的标准价。两次回退：`grok-4.5` 长上下文阶梯因高档价无法核实而撤销（`8a6e978`）；`glm-5.2` 误用了 GLM-5.1 的 ¥6/¥24 档（`6c998dc`）。**核不到只是当时的状态，厂商补上文档后要回来补配**——Grok 的 200K 阶梯就是这样在 `docs.x.ai/docs/pricing` 列出完整高档价后补回的。查价用官方文档页：Anthropic 是 `platform.claude.com/docs/en/about-claude/pricing.md`（注意 `/docs/en/pricing.md` 是 404），OpenAI 是 `developers.openai.com/api/docs/pricing`（`platform.openai.com/docs/pricing` 会 301 过去），xAI 是 `docs.x.ai/docs/pricing`。
+
+- **长上下文阈值各家不同**，别套用：GPT 是 272K，Grok 是 200K，Claude 1M 内不分档。Grok 还是"整个请求按高档计费"（提示词达 200K，全量按 $4/$12），不是超出部分才涨。
 
 - **模型描述用代际表述**（「当前 / 上一代 / 旧版」），不写死「最强」这类绝对说法。新一代发布时只需把各档降一级，不用重写整组文案。
 
 - **添加一个模型要动 4 处**，漏配会导致计费错误：`models` 数组 + `ModelRatio` + `CompletionRatio` + `CacheRatio`，Claude 系列再加 `CreateCacheRatio`。加完用脚本校验三张必需表对每个模型都有条目、且没有指向已删模型的孤儿键。
 
-- `claude-sonnet-5` 倍率 1（$2/$10）是官方限时价，**2026-08-31 后改为 1.5**（$3/$15）。
+- **`CacheRatio` 不是全系 0.1**：Anthropic 从 Fable 5.1 起把缓存命中改成 **0.025x**（`claude-fable-5-1` 命中 $0.25，而 `claude-fable-5` 仍是 0.1x 的 $1）。新增 Claude 模型时别照抄上一代的 0.1，去价目表确认那一行的命中价。
+
+- **改一个已有模型的价，四张表要一起改**：厂商降价时 `ModelRatio` / `CompletionRatio` / `CacheRatio` 和 `billing_expr` 里的绝对价必须同步，只改一处会让分档与兜底倍率打架。`gpt-5.6-terra`（$2.5/$15 → $2/$12）与 `gpt-5.6-luna`（$1/$6 → $0.2/$1.2）跟进降价时就是整组同步改的。
+
+- **`gpt-5.6-sol` 是有意偏离官方价**：官方已降到 $4/$20（长档 $8/$30、写入 $5/$10），本仓库按决策**保留旧价 $5/$30**（长档 $10/$45、写入 $6.25/$12.5）。这不是过期数据，别当成漏更新顺手「修正」；要跟进时倍率改 `2 / 5 / 0.1`，`billing_expr` 同步换成新价。
+
+- `claude-sonnet-5` 倍率 1（$2/$10）**已是官方标准价**：原定 2026-09-01 涨到 $3/$15 的计划被 Anthropic 明确取消，不要再按限时价处理。
 
 ## Git 约定
 
