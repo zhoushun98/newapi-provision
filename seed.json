@@ -280,16 +280,6 @@
       "claude-sonnet-4-6": 1.25,
       "claude-haiku-4-5-20251001": 1.25
     },
-    "billing_setting.billing_mode": {
-      "gpt-6-astra": "tiered_expr",
-      "gpt-5.5": "tiered_expr",
-      "gpt-5.4": "tiered_expr",
-      "gpt-5.6-sol": "tiered_expr",
-      "gpt-5.6-terra": "tiered_expr",
-      "gpt-5.6-luna": "tiered_expr",
-      "grok-4.6": "tiered_expr",
-      "grok-4.5": "tiered_expr"
-    },
     "billing_setting.billing_expr": {
       "gpt-6-astra": "len <= 272000\n  ? tier(\"standard\", p * 10 + c * 50 + cr * 1 + cc * 12.5)\n  : tier(\"long_context\", p * 20 + c * 75 + cr * 2 + cc * 25)",
       "gpt-5.5": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1)",
@@ -299,6 +289,16 @@
       "gpt-5.6-luna": "len <= 272000\n  ? tier(\"standard\", p * 1 + c * 6 + cr * 0.1 + cc * 1.25)\n  : tier(\"long_context\", p * 2 + c * 9 + cr * 0.2 + cc * 2.5)",
       "grok-4.6": "len <= 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
       "grok-4.5": "len <= 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.3)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 0.6)"
+    },
+    "billing_setting.billing_mode": {
+      "gpt-6-astra": "tiered_expr",
+      "gpt-5.5": "tiered_expr",
+      "gpt-5.4": "tiered_expr",
+      "gpt-5.6-sol": "tiered_expr",
+      "gpt-5.6-terra": "tiered_expr",
+      "gpt-5.6-luna": "tiered_expr",
+      "grok-4.6": "tiered_expr",
+      "grok-4.5": "tiered_expr"
     },
     "ModelPrice": {}
   },

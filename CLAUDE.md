@@ -46,6 +46,11 @@ seed.json ──> provision.py ──> new-api REST API
 
 **顺序依赖**：供应商必须先建，因为模型需要 `vendor_id`。首跑时若供应商尚不存在，模型会以未绑定状态创建，重跑时由补绑定逻辑修正（这是 `d80d871` 的由来）。补绑定走 `PUT /api/models/`，需先 `GET` 完整对象、再 `pop` 掉 `bound_channels` / `enable_groups` / `quota_types` / 时间戳等只读字段，否则接口报错。
 
+**`billing_setting.*` 两个 key 的顺序与幂等都有坑**（全新实例上才会暴露，老实例因为早被灌过而看不出来）：
+
+- **`billing_expr` 必须先于 `billing_mode` 写入**。后端校验「`billing_mode` 标为 `tiered_expr` 的模型必须在 `billing_expr` 里有对应条目」，否则 `PUT /api/option/` 报 `billing expression is required`。`--reset-pricing` 是整体替换，先写 mode 会让新模型在旧的 expr 表里找不到表达式而整批被拒。脚本用 `option_order` 显式兜住，不依赖 `seed.json` 的键顺序。
+- **这两个 key 做不到精确重置**：后端自带 `gpt-image-2` / `gpt-image-2.5-flare` / `gpt-image-2.5-sunburst` 三条内置表达式（图像计费要用 `img`、`img_cr` 变量，纯倍率表达不了），PUT 覆盖后会被重新补回。所以 reset 模式对它们的幂等判断只看「seed 的条目是否都已就位」（`backend_managed`），否则每次重跑都会白写一遍 PUT。
+
 **渠道（含上游密钥）不在种子范围内**，需在目标系统手工添加；模型与渠道的绑定会自动关联。
 
 **`--reset-pricing` 有破坏性**：目标系统上手工配过、但没进 `seed.json` 的定价会被一并清掉，`options_reset_extra` 列出的键（图片/音频倍率）会清空。务必先 `--dry-run` 看清单。

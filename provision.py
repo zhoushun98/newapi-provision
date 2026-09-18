@@ -122,9 +122,26 @@ def main():
         call("PUT", "/api/option/", {"key": key, "value": json.dumps(value_map, ensure_ascii=False)})
         print(f"已更新选项: {key}（{note}）")
 
-    for key, entries in seed["options_merge"].items():
+    # 写入顺序有依赖：billing_expr 必须先于 billing_mode。后端校验「billing_mode 标为
+    # tiered_expr 的模型必须在 billing_expr 里有对应条目」，全新实例上两张表都是空的，
+    # 先写 mode 会被拒：billing expression is required。这里显式兜住，不依赖 seed.json 的键顺序。
+    option_order = {"billing_setting.billing_expr": 1, "billing_setting.billing_mode": 2}
+
+    # 这两个 key 后端会补回自带的内置条目（gpt-image-* 的图像计费用 img/img_cr 变量，
+    # 纯倍率表达不了，被硬编码成 tiered_expr），PUT 覆盖后又会出现，做不到精确重置。
+    # 幂等判断因此只看「seed 的条目是否都已就位」，否则每次重跑都会白写一遍。
+    backend_managed = {"billing_setting.billing_expr", "billing_setting.billing_mode"}
+
+    for key in sorted(seed["options_merge"], key=lambda k: option_order.get(k, 0)):
+        entries = seed["options_merge"][key]
         live = json.loads(current.get(key) or "{}")
         if args.reset_pricing:
+            if key in backend_managed:
+                if all(live.get(k) == v for k, v in entries.items()):
+                    print(f"选项已是目标状态，跳过: {key}")
+                    continue
+                put_option(key, entries, f"写入 {len(entries)} 项（后端内置条目会自动补回）")
+                continue
             if live == entries:
                 print(f"选项已是目标状态，跳过: {key}")
                 continue
