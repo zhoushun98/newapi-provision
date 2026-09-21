@@ -6,8 +6,8 @@
 
 - `seed.json` — 权威配置数据（从线上实例导出，可按需修改）：
   - 3 个供应商（OpenAI、Anthropic、xAI，含图标）
-  - 19 个模型的元信息：名称、供应商归属、图标、标签、简介、端点、匹配类型
-  - 计费：`ModelRatio` / `CompletionRatio` / `CacheRatio` / `CreateCacheRatio`（19 个模型的倍率），以及 8 个阶梯表达式模型（`billing_setting.*`）：6 个 GPT 模型的 272K 长上下文分档 + 2 个 Grok 模型的 200K 分档
+  - 17 个模型的元信息：名称、供应商归属、图标、标签、简介、端点、匹配类型
+  - 计费：`ModelRatio` / `CompletionRatio` / `CacheRatio` / `CreateCacheRatio`（17 个模型的倍率），以及 7 个阶梯表达式模型（`billing_setting.*`）：5 个 GPT 模型的 272K 长上下文分档 + 2 个 Grok 模型的 200K 分档
 - `provision.py` — 幂等灌入脚本，标准库实现，无依赖
 
 ## 用法

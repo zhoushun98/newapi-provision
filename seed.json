@@ -65,26 +65,6 @@
       "name_rule": 0
     },
     {
-      "model_name": "gpt-5.4",
-      "vendor": "OpenAI",
-      "icon": "OpenAI",
-      "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Tools,Vision,400K",
-      "description": "GPT-5.4：成本与能力均衡的通用模型",
-      "status": 1,
-      "name_rule": 0
-    },
-    {
-      "model_name": "gpt-5.4-mini",
-      "vendor": "OpenAI",
-      "icon": "OpenAI",
-      "endpoints": "[\"openai\"]",
-      "tags": "Fast,Tools,Vision,400K",
-      "description": "GPT-5.4 小型版：高吞吐低成本",
-      "status": 1,
-      "name_rule": 0
-    },
-    {
       "model_name": "codex-auto-review",
       "vendor": "OpenAI",
       "icon": "OpenAI",
@@ -207,11 +187,9 @@
   ],
   "options_merge": {
     "ModelRatio": {
-      "gpt-5.4": 1.25,
       "gpt-5.5": 2.5,
       "gpt-6-astra": 5,
       "gpt-5.6-sol": 2.5,
-      "gpt-5.4-mini": 0.375,
       "gpt-5.6-luna": 0.5,
       "gpt-5.6-terra": 1,
       "claude-fable-5": 5,
@@ -228,11 +206,9 @@
       "grok-4.6": 1
     },
     "CompletionRatio": {
-      "gpt-5.4": 6,
       "gpt-5.5": 6,
       "gpt-6-astra": 5,
       "gpt-5.6-sol": 6,
-      "gpt-5.4-mini": 6,
       "gpt-5.6-luna": 6,
       "gpt-5.6-terra": 6,
       "claude-fable-5": 5,
@@ -249,11 +225,9 @@
       "grok-4.6": 3
     },
     "CacheRatio": {
-      "gpt-5.4": 0.1,
       "gpt-5.5": 0.1,
       "gpt-6-astra": 0.1,
       "gpt-5.6-sol": 0.1,
-      "gpt-5.4-mini": 0.1,
       "gpt-5.6-luna": 0.1,
       "gpt-5.6-terra": 0.1,
       "claude-fable-5": 0.1,
@@ -283,7 +257,6 @@
     "billing_setting.billing_expr": {
       "gpt-6-astra": "len <= 272000\n  ? tier(\"standard\", p * 10 + c * 50 + cr * 1 + cc * 12.5)\n  : tier(\"long_context\", p * 20 + c * 75 + cr * 2 + cc * 25)",
       "gpt-5.5": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1)",
-      "gpt-5.4": "len <= 272000\n  ? tier(\"standard\", p * 2.5 + c * 15 + cr * 0.25)\n  : tier(\"long_context\", p * 5 + c * 22.5 + cr * 0.5)",
       "gpt-5.6-sol": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1 + cc * 12.5)",
       "gpt-5.6-terra": "len <= 272000\n  ? tier(\"standard\", p * 2 + c * 12 + cr * 0.2 + cc * 2.5)\n  : tier(\"long_context\", p * 4 + c * 18 + cr * 0.4 + cc * 5)",
       "gpt-5.6-luna": "len <= 272000\n  ? tier(\"standard\", p * 1 + c * 6 + cr * 0.1 + cc * 1.25)\n  : tier(\"long_context\", p * 2 + c * 9 + cr * 0.2 + cc * 2.5)",
@@ -293,7 +266,6 @@
     "billing_setting.billing_mode": {
       "gpt-6-astra": "tiered_expr",
       "gpt-5.5": "tiered_expr",
-      "gpt-5.4": "tiered_expr",
       "gpt-5.6-sol": "tiered_expr",
       "gpt-5.6-terra": "tiered_expr",
       "gpt-5.6-luna": "tiered_expr",
