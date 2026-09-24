@@ -1,28 +1,50 @@
 #!/usr/bin/env python3
-"""new-api 一键配置脚本：按 seed.json 灌入 模型元信息 → 计费配置。
+"""new-api 一键配置脚本：按 seed.json 灌入 供应商 → 模型元信息 → 计费配置。
+
+适配 new-api v1.0.0-rc.40 及以上：定价走按模型的 /api/option/model_pricing 接口。
 
 幂等设计，可反复执行：
-  - 模型：按名称查重，已存在则跳过；若已存在但供应商绑定与 seed 不符
-    （如首跑时供应商还没建，模型以未绑定状态创建），会自动补绑定
-  - 计费选项（ModelRatio 等）默认「合并」：只增改 seed 中的条目，
-    不覆盖目标系统已有的其他模型条目
-  - 加 --reset-pricing 则为「清空重置」：定价类选项整体替换为 seed 的精确状态，
-    seed 之外的旧条目（如系统出厂默认的一大堆过时模型倍率）全部清掉，
-    并将 options_reset_extra 列出的键（图片/音频倍率等）清为空表
   - 供应商：按名称查重，缺失则连同图标一起创建；已存在的不做修改
+  - 模型元信息：按名称查重，缺失则创建；已存在则以 seed 为准，描述 / 图标 / 标签 /
+    端点 / 状态 / 匹配规则 / 供应商绑定有差异才更新
+  - 定价：seed 内的模型整体替换为 seed 的定价（该模型在 seed 里没配的键会被清掉，
+    例如残留的阶梯表达式）；seed 之外的模型默认不动
+  - 加 --reset-pricing 则连 seed 之外的模型定价也全部清空（出厂默认的一大堆过时倍率、
+    手工配过的其他模型），只留 seed 的精确状态；后端内置的计费表达式（gpt-image-* 等）
+    本就不落库，不受影响
+  - 全部定价变更合成一个请求提交：后端单事务写入、逐模型整体校验，任一失败整批不生效
 
 用法：
-  python3 provision.py --base-url http://目标机:3000 --token <管理员访问令牌> [--user-id 1] [--dry-run]
+  python3 provision.py --base-url http://目标机:3000 --token <超级管理员访问令牌> [--user-id 1] [--dry-run]
+  python3 provision.py --check      # 只离线校验 seed.json，不连实例
 
-管理员访问令牌：目标系统 控制台 → 个人资料 → 生成访问令牌（access token）。
+访问令牌：目标系统 控制台 → 个人资料 → 生成访问令牌（定价接口要求超级管理员）。
 """
 
 import argparse
 import json
+import math
+import re
 import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+# 与后端 modelPricingOptionKeys 对齐（插件计费表达式除外，seed 不涉及）
+PRICING_KEYS = (
+    "ModelPrice", "ModelRatio", "CompletionRatio", "CacheRatio", "CreateCacheRatio",
+    "ImageRatio", "AudioRatio", "AudioCompletionRatio",
+    "billing_setting.billing_expr", "billing_setting.billing_mode",
+)
+# 每个模型都必须配的倍率表；Claude 另需 CreateCacheRatio
+REQUIRED_KEYS = ("ModelRatio", "CompletionRatio", "CacheRatio")
+META_DEFAULTS = {"description": "", "icon": "", "tags": "", "endpoints": "", "status": 1, "name_rule": 0}
+
+
+class ApiError(Exception):
+    def __init__(self, message, status=None):
+        super().__init__(message)
+        self.status = status
 
 
 def api(base, token, user_id, method, path, body=None):
@@ -40,131 +62,239 @@ def api(base, token, user_id, method, path, body=None):
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read())
     except urllib.error.HTTPError as e:
-        sys.exit(f"HTTP {e.code} {method} {path}: {e.read().decode()[:300]}")
+        raise ApiError(f"HTTP {e.code} {method} {path}: {e.read().decode()[:300]}", e.code)
     if not data.get("success", False):
-        sys.exit(f"API 失败 {method} {path}: {data.get('message')}")
+        raise ApiError(f"API 失败 {method} {path}: {data.get('message')}")
     return data.get("data")
+
+
+def check_seed(seed):
+    """离线校验 seed.json，返回错误列表。覆盖 CLAUDE.md「数据纪律」里能机器检查的部分。"""
+    errors = []
+    vendors = {v["name"] for v in seed.get("vendors", [])}
+    names = [m["model_name"] for m in seed["models"]]
+    dup = sorted({n for n in names if names.count(n) > 1})
+    if dup:
+        errors.append(f"models 里有重名: {', '.join(dup)}")
+    for m in seed["models"]:
+        if m.get("vendor") and m["vendor"] not in vendors:
+            errors.append(f"{m['model_name']}: 供应商 {m['vendor']} 不在 vendors 里")
+        try:
+            json.loads(m.get("endpoints") or "[]")
+        except ValueError:
+            errors.append(f"{m['model_name']}: endpoints 不是合法 JSON")
+
+    pricing = seed["pricing"]
+    for key, entries in pricing.items():
+        if key not in PRICING_KEYS:
+            errors.append(f"pricing 里有不支持的键: {key}")
+            continue
+        for name, value in entries.items():
+            if name not in names:
+                errors.append(f"{key}.{name}: 指向 models 里不存在的模型（孤儿键）")
+            if key == "billing_setting.billing_mode":
+                ok = value in ("ratio", "tiered_expr")
+            elif key == "billing_setting.billing_expr":
+                ok = isinstance(value, str) and value.strip() != ""
+            else:
+                ok = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0
+            if not ok:
+                errors.append(f"{key}.{name}: 取值非法 {value!r}")
+
+    for name in names:
+        missing = [k for k in REQUIRED_KEYS if name not in pricing.get(k, {})]
+        if name.startswith("claude-") and name not in pricing.get("CreateCacheRatio", {}):
+            missing.append("CreateCacheRatio")
+        if missing:
+            errors.append(f"{name}: 缺少 {', '.join(missing)}")
+        is_expr = pricing.get("billing_setting.billing_mode", {}).get(name) == "tiered_expr"
+        expr = pricing.get("billing_setting.billing_expr", {}).get(name)
+        if is_expr != (expr is not None):
+            errors.append(f"{name}: billing_mode=tiered_expr 与 billing_expr 必须成对出现")
+        if expr and not missing:
+            errors += check_expr_vs_ratio(name, expr, pricing)
+    return errors
+
+
+def check_expr_vs_ratio(name, expr, pricing):
+    """表达式 standard 档的绝对价必须与倍率反算一致，否则分档与兜底倍率会打架。"""
+    tier = re.search(r'tier\("standard",([^)]*)\)', expr)
+    if not tier:
+        return [f"{name}: billing_expr 里找不到 tier(\"standard\", ...)"]
+    coef = {v: float(x) for v, x in re.findall(r"\b(p|c|cr|cc)\s*\*\s*([\d.]+)", tier.group(1))}
+    base = pricing["ModelRatio"][name] * 2
+    expected = {
+        "p": base,
+        "c": base * pricing["CompletionRatio"][name],
+        "cr": base * pricing["CacheRatio"][name],
+    }
+    if name in pricing.get("CreateCacheRatio", {}):
+        expected["cc"] = base * pricing["CreateCacheRatio"][name]
+    return [
+        f"{name}: standard 档 {v} * {coef[v]:g} 与倍率反算的 {want:g} 不一致"
+        for v, want in expected.items()
+        if v in coef and not math.isclose(coef[v], want, rel_tol=1e-9)
+    ]
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base-url", required=True)
-    ap.add_argument("--token", required=True)
+    ap.add_argument("--base-url")
+    ap.add_argument("--token")
     ap.add_argument("--user-id", default="1")
     ap.add_argument("--seed", default=str(Path(__file__).parent / "seed.json"))
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--check", action="store_true", help="只离线校验 seed.json，不连接实例")
     ap.add_argument("--reset-pricing", action="store_true",
-                    help="定价选项整体替换为 seed 精确状态（清掉 seed 之外的所有旧条目），默认为合并模式")
+                    help="连 seed 之外的模型定价也全部清空，只留 seed 的精确状态；默认只动 seed 内的模型")
     args = ap.parse_args()
 
     seed = json.loads(Path(args.seed).read_text())
+    errors = check_seed(seed)
+    if errors:
+        sys.exit("seed.json 校验失败：\n  " + "\n  ".join(errors))
+    if args.check:
+        print(f"seed.json 校验通过：{len(seed['vendors'])} 个供应商、{len(seed['models'])} 个模型")
+        return
+    if not (args.base_url and args.token):
+        ap.error("需要 --base-url 与 --token（或用 --check 只做离线校验）")
 
     def call(method, path, body=None):
         return api(args.base_url, args.token, args.user_id, method, path, body)
 
+    def list_all(path):
+        # rc.40 的分页接口把 page_size 截断到 100，超出部分必须翻页
+        items, page = [], 1
+        while True:
+            data = call("GET", f"{path}?p={page}&page_size=100")
+            items += data["items"] or []
+            if not data["items"] or len(items) >= data["total"]:
+                return items
+            page += 1
+
+    # 先探测定价接口：旧版本没有它，在任何写入发生前就报错
+    try:
+        snapshot = call("GET", "/api/option/model_pricing")
+    except ApiError as e:
+        if e.status == 404:
+            sys.exit("目标实例没有 /api/option/model_pricing 接口，需要 new-api v1.0.0-rc.40 及以上")
+        raise
+
     # 1. 供应商：按名称查重，缺失则创建（含图标）；已存在的不做修改
-    existing = call("GET", "/api/vendors/?p=1&page_size=100")["items"]
-    vendor_ids = {v["name"]: v["id"] for v in existing}
+    vendor_ids = {v["name"]: v["id"] for v in list_all("/api/vendors/")}
     for v in seed.get("vendors", []):
         if v["name"] in vendor_ids:
             print(f"供应商已存在，跳过: {v['name']}")
             continue
         if args.dry_run:
             print(f"[dry-run] 将创建供应商: {v['name']}")
+            vendor_ids[v["name"]] = -1  # 占位，仅用于 dry-run 展示模型的绑定差异
             continue
         created = call("POST", "/api/vendors/", {"name": v["name"], "icon": v.get("icon", ""), "status": 1})
         vendor_ids[v["name"]] = created["id"]
         print(f"已创建供应商: {v['name']} (id={created['id']})")
+    vendor_names = {vid: name for name, vid in vendor_ids.items()}
 
-    # 2. 模型元信息：按名称查重，缺失则创建；已存在但供应商绑定不符则补绑定
-    page = call("GET", "/api/models/search?keyword=&p=1&page_size=200")
-    existing_models = {m["model_name"]: m for m in page["items"]}
+    # 2. 模型元信息：缺失则创建；已存在则逐字段对照 seed，有差异才更新
+    def same(field, a, b):
+        if field == "endpoints":  # UI 保存可能改掉空格，按 JSON 语义比较
+            try:
+                return json.loads(a or "null") == json.loads(b or "null")
+            except ValueError:
+                pass
+        return a == b
+
+    def show(field, value):
+        if field == "vendor_id":
+            return vendor_names.get(value, "无") if value else "无"
+        return json.dumps(value, ensure_ascii=False)
+
+    existing_models = {m["model_name"]: m for m in list_all("/api/models/")}
     for m in seed["models"]:
-        want_vendor = vendor_ids.get(m.get("vendor", ""), 0)
-        exist = existing_models.get(m["model_name"])
-        if exist:
-            if want_vendor and exist.get("vendor_id") != want_vendor:
-                if args.dry_run:
-                    print(f"[dry-run] 将补绑定供应商: {m['model_name']} → {m['vendor']}")
-                    continue
-                full = call("GET", f"/api/models/{exist['id']}")
-                full["vendor_id"] = want_vendor
-                for k in ("bound_channels", "enable_groups", "quota_types", "created_time", "updated_time"):
-                    full.pop(k, None)
-                call("PUT", "/api/models/", full)
-                print(f"已补绑定供应商: {m['model_name']} → {m['vendor']}")
+        name = m["model_name"]
+        want = {f: m.get(f, d) for f, d in META_DEFAULTS.items()}
+        want["vendor_id"] = vendor_ids.get(m.get("vendor"), 0)
+        exist = existing_models.get(name)
+        if not exist:
+            if args.dry_run:
+                print(f"[dry-run] 将创建模型: {name} (vendor={m.get('vendor')})")
+                continue
+            # sync_official=0：seed 才是元信息的权威，关掉「同步官方元数据」以免被上游覆盖
+            call("POST", "/api/models/", {"model_name": name, **want, "sync_official": 0})
+            print(f"已创建模型: {name}")
+            continue
+        have = {f: exist.get(f, d) for f, d in META_DEFAULTS.items()}
+        have["vendor_id"] = exist.get("vendor_id", 0)
+        changed = [f for f in want if not same(f, have[f], want[f])]
+        if not changed:
+            print(f"模型元信息一致，跳过: {name}")
+            continue
+        if args.dry_run:
+            detail = "；".join(f"{f}: {show(f, have[f])} → {show(f, want[f])}" for f in changed)
+            print(f"[dry-run] 将更新模型元信息: {name}（{detail}）")
+            continue
+        # PUT 会整行覆盖这些列，sync_official 必须原样带回
+        call("PUT", "/api/models/", {"id": exist["id"], "model_name": name,
+                                     "sync_official": exist.get("sync_official", 0), **want})
+        print(f"已更新模型元信息: {name}（{', '.join(changed)}）")
+
+    # 3. 定价：按模型对照 seed，生成变更集后一次提交
+    desired = {}
+    for key, entries in seed["pricing"].items():
+        for name, value in entries.items():
+            desired.setdefault(name, {})[key] = value
+    live = {e["model_name"]: e for e in snapshot["entries"]}
+
+    def pricing_diff(old, new):
+        parts = []
+        for key in sorted(set(old) | set(new)):
+            a, b = old.get(key), new.get(key)
+            if a == b:
+                continue
+            short = key.removeprefix("billing_setting.")
+            if key.startswith("billing_setting."):
+                parts.append(f"{short} {'新增' if a is None else '删除' if b is None else '变更'}")
             else:
-                print(f"模型已存在，跳过: {m['model_name']}")
+                parts.append(f"{short} {'无' if a is None else a}→{'无' if b is None else b}")
+        return "，".join(parts)
+
+    changes = []
+    for name, target in desired.items():
+        entry = live.get(name)
+        configured = entry["configured"] if entry else {}
+        if configured == target:
+            print(f"定价一致，跳过: {name}")
             continue
-        body = {
-            "model_name": m["model_name"],
-            "vendor_id": want_vendor,
-            "icon": m.get("icon", ""),
-            "endpoints": m.get("endpoints", ""),
-            "tags": m.get("tags", ""),
-            "description": m.get("description", ""),
-            "status": m.get("status", 1),
-            "name_rule": m.get("name_rule", 0),
-        }
-        if args.dry_run:
-            print(f"[dry-run] 将创建模型: {m['model_name']} (vendor={m['vendor']})")
-            continue
-        call("POST", "/api/models/", body)
-        print(f"已创建模型: {m['model_name']}")
-
-    # 3. 计费选项：读取现值 → 合并或整体替换 → 有变化才写回
-    current = {o["key"]: o["value"] for o in call("GET", "/api/option/")}
-
-    def put_option(key, value_map, note):
-        if args.dry_run:
-            print(f"[dry-run] 将更新选项 {key}：{note}")
-            return
-        call("PUT", "/api/option/", {"key": key, "value": json.dumps(value_map, ensure_ascii=False)})
-        print(f"已更新选项: {key}（{note}）")
-
-    # 写入顺序有依赖：billing_expr 必须先于 billing_mode。后端校验「billing_mode 标为
-    # tiered_expr 的模型必须在 billing_expr 里有对应条目」，全新实例上两张表都是空的，
-    # 先写 mode 会被拒：billing expression is required。这里显式兜住，不依赖 seed.json 的键顺序。
-    option_order = {"billing_setting.billing_expr": 1, "billing_setting.billing_mode": 2}
-
-    # 这两个 key 后端会补回自带的内置条目（gpt-image-* 的图像计费用 img/img_cr 变量，
-    # 纯倍率表达不了，被硬编码成 tiered_expr），PUT 覆盖后又会出现，做不到精确重置。
-    # 幂等判断因此只看「seed 的条目是否都已就位」，否则每次重跑都会白写一遍。
-    backend_managed = {"billing_setting.billing_expr", "billing_setting.billing_mode"}
-
-    for key in sorted(seed["options_merge"], key=lambda k: option_order.get(k, 0)):
-        entries = seed["options_merge"][key]
-        live = json.loads(current.get(key) or "{}")
-        if args.reset_pricing:
-            if key in backend_managed:
-                if all(live.get(k) == v for k, v in entries.items()):
-                    print(f"选项已是目标状态，跳过: {key}")
-                    continue
-                put_option(key, entries, f"写入 {len(entries)} 项（后端内置条目会自动补回）")
-                continue
-            if live == entries:
-                print(f"选项已是目标状态，跳过: {key}")
-                continue
-            removed = [k for k in live if k not in entries]
-            put_option(key, entries, f"重置为 {len(entries)} 项，清除旧条目 {len(removed)} 项")
-        else:
-            changed = {k: v for k, v in entries.items() if live.get(k) != v}
-            if not changed:
-                print(f"选项无变化，跳过: {key}")
-                continue
-            live.update(changed)
-            put_option(key, live, f"新增/修改 {len(changed)} 项: {', '.join(changed)}")
-
+        changes.append({"model_name": name, "pricing": target,
+                        "expected_version": entry["version"] if entry else snapshot["empty_version"]})
+        print(f"{'[dry-run] ' if args.dry_run else ''}将写入定价: {name}（{pricing_diff(configured, target)}）")
     if args.reset_pricing:
-        for key in seed.get("options_reset_extra", []):
-            live = json.loads(current.get(key) or "{}")
-            if not live:
-                print(f"选项已为空，跳过: {key}")
-                continue
-            put_option(key, {}, f"清空（原有 {len(live)} 项）")
+        stale = sorted(n for n, e in live.items() if n not in desired and e["configured"])
+        for name in stale:
+            changes.append({"model_name": name, "pricing": {}, "expected_version": live[name]["version"]})
+        if stale:
+            shown = ", ".join(stale[:20]) + (f" …等 {len(stale)} 个" if len(stale) > 20 else "")
+            print(f"{'[dry-run] ' if args.dry_run else ''}将清除 seed 之外的模型定价: {shown}")
+        else:
+            print("seed 之外没有已配置的模型定价，无需清除")
+
+    if not changes:
+        print("定价无变化。")
+    elif args.dry_run:
+        # 预览接口无写入副作用：让后端按真实校验规则把每份草稿过一遍（表达式能否编译等）
+        for c in changes:
+            if c["pricing"]:
+                call("POST", "/api/option/model_pricing/preview", {"model_name": c["model_name"], "pricing": c["pricing"]})
+        print(f"[dry-run] 共 {len(changes)} 个模型的定价待提交，后端预校验通过")
+    else:
+        call("PATCH", "/api/option/model_pricing", {"changes": changes})
+        print(f"已提交 {len(changes)} 个模型的定价变更")
 
     print("完成。" + ("（dry-run，未做任何修改）" if args.dry_run else ""))
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except ApiError as e:
+        sys.exit(str(e))

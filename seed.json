@@ -18,9 +18,26 @@
       "model_name": "gpt-6-astra",
       "vendor": "OpenAI",
       "icon": "OpenAI",
-      "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
+      "endpoints": "[\"openai\", \"openai-response\"]",
       "description": "当前旗舰 GPT：最高难度的端到端工作与长程智能体任务",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
+      "model_name": "gpt-6-sol",
+      "vendor": "OpenAI",
+      "icon": "OpenAI",
+      "endpoints": "[\"openai\", \"openai-response\"]",
+      "description": "当前 GPT-6 均衡档：复杂编码与智能体工作流",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
+      "model_name": "gpt-6-luna",
+      "vendor": "OpenAI",
+      "icon": "OpenAI",
+      "endpoints": "[\"openai\", \"openai-response\"]",
+      "description": "当前 GPT-6 经济档：专注型、高并发任务",
       "status": 1,
       "name_rule": 0
     },
@@ -28,8 +45,7 @@
       "model_name": "gpt-5.6-sol",
       "vendor": "OpenAI",
       "icon": "OpenAI",
-      "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
+      "endpoints": "[\"openai\", \"openai-response\"]",
       "description": "上一代 GPT-5.6 高配档：复杂专业工作、编码与智能体工作流",
       "status": 1,
       "name_rule": 0
@@ -38,8 +54,7 @@
       "model_name": "gpt-5.6-terra",
       "vendor": "OpenAI",
       "icon": "OpenAI",
-      "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
+      "endpoints": "[\"openai\", \"openai-response\"]",
       "description": "上一代 GPT-5.6 均衡档：接近高配档的质量，成本显著更低",
       "status": 1,
       "name_rule": 0
@@ -48,8 +63,7 @@
       "model_name": "gpt-5.6-luna",
       "vendor": "OpenAI",
       "icon": "OpenAI",
-      "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
+      "endpoints": "[\"openai\", \"openai-response\"]",
       "description": "上一代 GPT-5.6 经济档：快速、适合生产环境高频调用",
       "status": 1,
       "name_rule": 0
@@ -58,8 +72,7 @@
       "model_name": "gpt-5.5",
       "vendor": "OpenAI",
       "icon": "OpenAI",
-      "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
+      "endpoints": "[\"openai\", \"openai-response\"]",
       "description": "旧版旗舰 GPT：编码、计算机使用、研究与知识工作",
       "status": 1,
       "name_rule": 0
@@ -68,9 +81,8 @@
       "model_name": "codex-auto-review",
       "vendor": "OpenAI",
       "icon": "OpenAI",
-      "endpoints": "[\"openai\"]",
-      "tags": "Coding,Agentic",
-      "description": "Codex 自动代码审查专用模型",
+      "endpoints": "[\"openai\", \"openai-response\"]",
+      "description": "Codex Auto-review 专用：由审核子代理代替人工审批操作请求",
       "status": 1,
       "name_rule": 0
     },
@@ -79,7 +91,6 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
       "description": "当前最高端 Claude：高难度推理与长程智能体任务（思考常开，缓存命中仅 2.5%）",
       "status": 1,
       "name_rule": 0
@@ -89,8 +100,16 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
       "description": "上一代 Fable：最高难度推理与长程智能体任务（思考常开）",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
+      "model_name": "claude-opus-5-5",
+      "vendor": "Anthropic",
+      "icon": "Claude.Color",
+      "endpoints": "[\"anthropic\", \"openai\"]",
+      "description": "当前 Opus：长程智能体编码与知识工作，比上一代更便宜（缓存命中仅 5%）",
       "status": 1,
       "name_rule": 0
     },
@@ -99,8 +118,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
-      "description": "当前 Opus：复杂智能体编码与企业级工作，与 4.8 同价",
+      "description": "上一代 Opus：复杂智能体编码与企业级工作，与 4.8 同价",
       "status": 1,
       "name_rule": 0
     },
@@ -109,8 +127,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
-      "description": "上一代 Opus：长程智能体执行、知识工作与记忆",
+      "description": "旧版 Opus：长程智能体执行、知识工作与记忆",
       "status": 1,
       "name_rule": 0
     },
@@ -119,7 +136,6 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
       "description": "旧版 Opus：长程智能体、视觉与记忆能力强",
       "status": 1,
       "name_rule": 0
@@ -129,7 +145,6 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
       "description": "旧版 Opus：首代支持自适应思考",
       "status": 1,
       "name_rule": 0
@@ -139,7 +154,6 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
       "description": "当前 Sonnet：速度与智能兼顾，以 Sonnet 价格获得接近 Opus 的编码与智能体能力",
       "status": 1,
       "name_rule": 0
@@ -149,7 +163,6 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "tags": "Reasoning,Tools,Vision,1M",
       "description": "上一代 Sonnet：速度与智能均衡",
       "status": 1,
       "name_rule": 0
@@ -159,8 +172,16 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "tags": "Fast,Tools,Vision,200K",
-      "description": "当前 Haiku：最快、最省的 Claude，适合简单任务",
+      "description": "当前 Haiku：轻量快速、成本低，适合简单与高并发任务",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
+      "model_name": "grok-4.7",
+      "vendor": "xAI",
+      "icon": "Grok",
+      "endpoints": "[\"openai\"]",
+      "description": "xAI 当前旗舰：编码、智能体任务与知识工作，500K 上下文",
       "status": 1,
       "name_rule": 0
     },
@@ -169,8 +190,7 @@
       "vendor": "xAI",
       "icon": "Grok",
       "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Tools,Vision,500K",
-      "description": "xAI 当前旗舰：长程智能体、编码与研究，500K 上下文",
+      "description": "上一代 xAI 旗舰：长程智能体、编码与研究，500K 上下文",
       "status": 1,
       "name_rule": 0
     },
@@ -179,59 +199,69 @@
       "vendor": "xAI",
       "icon": "Grok",
       "endpoints": "[\"openai\"]",
-      "tags": "Reasoning,Tools,Vision,500K",
-      "description": "上一代 xAI 旗舰：500K 上下文，多模态推理",
+      "description": "旧版 xAI 旗舰：智能体编码与工程任务，500K 上下文",
       "status": 1,
       "name_rule": 0
     }
   ],
-  "options_merge": {
+  "pricing": {
     "ModelRatio": {
       "gpt-5.5": 2.5,
       "gpt-6-astra": 5,
-      "gpt-5.6-sol": 2.5,
-      "gpt-5.6-luna": 0.5,
+      "gpt-6-sol": 1,
+      "gpt-6-luna": 0.05,
+      "gpt-5.6-sol": 2,
+      "gpt-5.6-luna": 0.1,
       "gpt-5.6-terra": 1,
       "claude-fable-5": 5,
       "claude-fable-5-1": 5,
+      "claude-opus-5-5": 2,
       "claude-opus-4-6": 2.5,
       "claude-opus-4-7": 2.5,
       "claude-opus-4-8": 2.5,
       "claude-opus-5": 2.5,
       "claude-sonnet-5": 1,
       "claude-sonnet-4-6": 1.5,
-      "codex-auto-review": 2.5,
+      "codex-auto-review": 2,
       "claude-haiku-4-5-20251001": 0.5,
       "grok-4.5": 1,
-      "grok-4.6": 1
+      "grok-4.6": 1,
+      "grok-4.7": 1
     },
     "CompletionRatio": {
       "gpt-5.5": 6,
       "gpt-6-astra": 5,
-      "gpt-5.6-sol": 6,
+      "gpt-6-sol": 5,
+      "gpt-6-luna": 5,
+      "gpt-5.6-sol": 5,
       "gpt-5.6-luna": 6,
       "gpt-5.6-terra": 6,
       "claude-fable-5": 5,
       "claude-fable-5-1": 5,
+      "claude-opus-5-5": 5,
       "claude-opus-4-6": 5,
       "claude-opus-4-7": 5,
       "claude-opus-4-8": 5,
       "claude-opus-5": 5,
       "claude-sonnet-5": 5,
       "claude-sonnet-4-6": 5,
-      "codex-auto-review": 6,
+      "codex-auto-review": 5,
       "claude-haiku-4-5-20251001": 5,
       "grok-4.5": 3,
-      "grok-4.6": 3
+      "grok-4.6": 3,
+      "grok-4.7": 3
     },
     "CacheRatio": {
       "gpt-5.5": 0.1,
       "gpt-6-astra": 0.1,
+      "gpt-6-sol": 0.1,
+      "gpt-6-luna": 0.1,
       "gpt-5.6-sol": 0.1,
       "gpt-5.6-luna": 0.1,
       "gpt-5.6-terra": 0.1,
       "claude-fable-5": 0.1,
       "claude-fable-5-1": 0.025,
+      "claude-opus-5-5": 0.05,
       "claude-opus-4-6": 0.1,
       "claude-opus-4-7": 0.1,
       "claude-opus-4-8": 0.1,
@@ -241,11 +271,13 @@
       "codex-auto-review": 0.1,
       "claude-haiku-4-5-20251001": 0.1,
       "grok-4.5": 0.15,
-      "grok-4.6": 0.25
+      "grok-4.6": 0.25,
+      "grok-4.7": 0.25
     },
     "CreateCacheRatio": {
       "claude-fable-5-1": 1.25,
       "claude-fable-5": 1.25,
+      "claude-opus-5-5": 1.25,
       "claude-opus-5": 1.25,
       "claude-opus-4-8": 1.25,
       "claude-opus-4-7": 1.25,
@@ -256,29 +288,29 @@
     },
     "billing_setting.billing_expr": {
       "gpt-6-astra": "len <= 272000\n  ? tier(\"standard\", p * 10 + c * 50 + cr * 1 + cc * 12.5)\n  : tier(\"long_context\", p * 20 + c * 75 + cr * 2 + cc * 25)",
+      "gpt-6-sol": "len <= 272000\n  ? tier(\"standard\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5)\n  : tier(\"long_context\", p * 4 + c * 15 + cr * 0.4 + cc * 5)",
+      "gpt-6-luna": "len <= 272000\n  ? tier(\"standard\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125)\n  : tier(\"long_context\", p * 0.2 + c * 0.75 + cr * 0.02 + cc * 0.25)",
       "gpt-5.5": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1)",
-      "gpt-5.6-sol": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1 + cc * 12.5)",
+      "gpt-5.6-sol": "len <= 272000\n  ? tier(\"standard\", p * 4 + c * 20 + cr * 0.4 + cc * 5)\n  : tier(\"long_context\", p * 8 + c * 30 + cr * 0.8 + cc * 10)",
       "gpt-5.6-terra": "len <= 272000\n  ? tier(\"standard\", p * 2 + c * 12 + cr * 0.2 + cc * 2.5)\n  : tier(\"long_context\", p * 4 + c * 18 + cr * 0.4 + cc * 5)",
-      "gpt-5.6-luna": "len <= 272000\n  ? tier(\"standard\", p * 1 + c * 6 + cr * 0.1 + cc * 1.25)\n  : tier(\"long_context\", p * 2 + c * 9 + cr * 0.2 + cc * 2.5)",
-      "codex-auto-review": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1 + cc * 12.5)",
-      "grok-4.6": "len <= 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
-      "grok-4.5": "len <= 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.3)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 0.6)"
+      "gpt-5.6-luna": "len <= 272000\n  ? tier(\"standard\", p * 0.2 + c * 1.2 + cr * 0.02 + cc * 0.25)\n  : tier(\"long_context\", p * 0.4 + c * 1.8 + cr * 0.04 + cc * 0.5)",
+      "codex-auto-review": "len <= 272000\n  ? tier(\"standard\", p * 4 + c * 20 + cr * 0.4 + cc * 5)\n  : tier(\"long_context\", p * 8 + c * 30 + cr * 0.8 + cc * 10)",
+      "grok-4.7": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
+      "grok-4.6": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
+      "grok-4.5": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.3)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 0.6)"
     },
     "billing_setting.billing_mode": {
       "gpt-6-astra": "tiered_expr",
+      "gpt-6-sol": "tiered_expr",
+      "gpt-6-luna": "tiered_expr",
       "gpt-5.5": "tiered_expr",
       "gpt-5.6-sol": "tiered_expr",
       "gpt-5.6-terra": "tiered_expr",
       "gpt-5.6-luna": "tiered_expr",
       "codex-auto-review": "tiered_expr",
+      "grok-4.7": "tiered_expr",
       "grok-4.6": "tiered_expr",
       "grok-4.5": "tiered_expr"
-    },
-    "ModelPrice": {}
-  },
-  "options_reset_extra": [
-    "ImageRatio",
-    "AudioRatio",
-    "AudioCompletionRatio"
-  ]
+    }
+  }
 }
