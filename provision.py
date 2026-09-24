@@ -7,8 +7,8 @@
   - 供应商：按名称查重，缺失则连同图标一起创建；已存在的不做修改
   - 模型元信息：按名称查重，缺失则创建；已存在则以 seed 为准，描述 / 图标 / 标签 /
     端点 / 状态 / 匹配规则 / 供应商绑定有差异才更新
-  - 定价：seed 内的模型整体替换为 seed 的定价（该模型在 seed 里没配的键会被清掉，
-    例如残留的阶梯表达式）；seed 之外的模型默认不动
+  - 定价：seed 只用计费表达式（rc.40 已弃用倍率 / 按次两种旧模式）；seed 内的模型整体替换为
+    seed 的定价（该模型在 seed 里没配的键会被清掉，例如旧的倍率）；seed 之外的模型默认不动
   - 加 --reset-pricing 则连 seed 之外的模型定价也全部清空（出厂默认的一大堆过时倍率、
     手工配过的其他模型），只留 seed 的精确状态；后端内置的计费表达式（gpt-image-* 等）
     本就不落库，不受影响
@@ -30,14 +30,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 与后端 modelPricingOptionKeys 对齐（插件计费表达式除外，seed 不涉及）
-PRICING_KEYS = (
-    "ModelPrice", "ModelRatio", "CompletionRatio", "CacheRatio", "CreateCacheRatio",
-    "ImageRatio", "AudioRatio", "AudioCompletionRatio",
-    "billing_setting.billing_expr", "billing_setting.billing_mode",
-)
-# 每个模型都必须配的倍率表；Claude 另需 CreateCacheRatio
-REQUIRED_KEYS = ("ModelRatio", "CompletionRatio", "CacheRatio")
+# rc.40 已弃用「按 Token（倍率）」「按次」两种旧定价模式，seed 只用计费表达式
+EXPR_KEY, MODE_KEY = "billing_setting.billing_expr", "billing_setting.billing_mode"
 META_DEFAULTS = {"description": "", "icon": "", "tags": "", "endpoints": "", "status": 1, "name_rule": 0}
 
 
@@ -85,56 +79,41 @@ def check_seed(seed):
             errors.append(f"{m['model_name']}: endpoints 不是合法 JSON")
 
     pricing = seed["pricing"]
-    for key, entries in pricing.items():
-        if key not in PRICING_KEYS:
-            errors.append(f"pricing 里有不支持的键: {key}")
-            continue
-        for name, value in entries.items():
-            if name not in names:
-                errors.append(f"{key}.{name}: 指向 models 里不存在的模型（孤儿键）")
-            if key == "billing_setting.billing_mode":
-                ok = value in ("ratio", "tiered_expr")
-            elif key == "billing_setting.billing_expr":
-                ok = isinstance(value, str) and value.strip() != ""
-            else:
-                ok = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0
-            if not ok:
-                errors.append(f"{key}.{name}: 取值非法 {value!r}")
-
+    for key in pricing:
+        if key not in (EXPR_KEY, MODE_KEY):
+            errors.append(f"pricing 里有 {key}：旧定价模式已弃用，价格一律写进 {EXPR_KEY}")
+    exprs, modes = pricing.get(EXPR_KEY, {}), pricing.get(MODE_KEY, {})
+    for name in sorted((set(exprs) | set(modes)) - set(names)):
+        errors.append(f"pricing.{name}: 指向 models 里不存在的模型（孤儿键）")
     for name in names:
-        missing = [k for k in REQUIRED_KEYS if name not in pricing.get(k, {})]
-        if name.startswith("claude-") and name not in pricing.get("CreateCacheRatio", {}):
-            missing.append("CreateCacheRatio")
-        if missing:
-            errors.append(f"{name}: 缺少 {', '.join(missing)}")
-        is_expr = pricing.get("billing_setting.billing_mode", {}).get(name) == "tiered_expr"
-        expr = pricing.get("billing_setting.billing_expr", {}).get(name)
-        if is_expr != (expr is not None):
-            errors.append(f"{name}: billing_mode=tiered_expr 与 billing_expr 必须成对出现")
-        if expr and not missing:
-            errors += check_expr_vs_ratio(name, expr, pricing)
+        expr = exprs.get(name)
+        if modes.get(name) != "tiered_expr" or not isinstance(expr, str) or not expr.strip():
+            errors.append(f"{name}: 需要 {EXPR_KEY}，且 {MODE_KEY} 为 tiered_expr")
+            continue
+        errors += check_expr(name, expr)
     return errors
 
 
-def check_expr_vs_ratio(name, expr, pricing):
-    """表达式 standard 档的绝对价必须与倍率反算一致，否则分档与兜底倍率会打架。"""
-    tier = re.search(r'tier\("standard",([^)]*)\)', expr)
-    if not tier:
-        return [f"{name}: billing_expr 里找不到 tier(\"standard\", ...)"]
-    coef = {v: float(x) for v, x in re.findall(r"\b(p|c|cr|cc)\s*\*\s*([\d.]+)", tier.group(1))}
-    base = pricing["ModelRatio"][name] * 2
-    expected = {
-        "p": base,
-        "c": base * pricing["CompletionRatio"][name],
-        "cr": base * pricing["CacheRatio"][name],
-    }
-    if name in pricing.get("CreateCacheRatio", {}):
-        expected["cc"] = base * pricing["CreateCacheRatio"][name]
-    return [
-        f"{name}: standard 档 {v} * {coef[v]:g} 与倍率反算的 {want:g} 不一致"
-        for v, want in expected.items()
-        if v in coef and not math.isclose(coef[v], want, rel_tol=1e-9)
-    ]
+def check_expr(name, expr):
+    """逐档检查缓存相关的系数。表达式能否编译交给后端预览接口（--dry-run）。"""
+    tiers = re.findall(r'tier\("(\w+)",([^)]*)\)', expr)
+    if not tiers:
+        return [f"{name}: billing_expr 里没有 tier(...)"]
+    errors = []
+    for tier, body in tiers:
+        coef = {v: float(x) for v, x in re.findall(r"\b(p|c|cr|cc|cc1h)\s*\*\s*([\d.]+)", body)}
+        if "p" not in coef or "c" not in coef:
+            errors.append(f"{name}: {tier} 档缺少 p 或 c")
+            continue
+        # Claude 格式的用量里缓存 token 不并入 p：漏写 cc / cc1h 这部分就不计费，漏写 cr 会按输入价收
+        missing = [v for v in ("cr", "cc", "cc1h") if v not in coef] if name.startswith("claude-") else []
+        if missing:
+            errors.append(f"{name}: {tier} 档缺少 {', '.join(missing)}")
+        # OpenAI 与 Anthropic 官方的缓存写入价都是输入价的固定倍数：5 分钟 1.25x，1 小时 2x
+        for v, times in (("cc", 1.25), ("cc1h", 2)):
+            if v in coef and not math.isclose(coef[v], coef["p"] * times, rel_tol=1e-9):
+                errors.append(f"{name}: {tier} 档 {v} * {coef[v]:g} 应为输入价的 {times:g} 倍（{coef['p'] * times:g}）")
+    return errors
 
 
 def main():

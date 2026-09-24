@@ -22,7 +22,7 @@ python3 provision.py --base-url http://目标机:3000 --token <访问令牌> --r
 
 访问令牌来自目标系统：控制台 → 个人资料 → 生成访问令牌（需**超级管理员**，`/api/option/*` 走 `RootAuth`）。
 
-`--check` 覆盖：三张必需倍率表（Claude 另加 `CreateCacheRatio`）是否齐全、孤儿键、`billing_mode` 与 `billing_expr` 是否成对、表达式 standard 档的绝对价与倍率反算是否一致。**它查不了价格对不对**——逐行对照官方价目表仍是人工的活，见下文。
+`--check` 覆盖：每个模型都有表达式且 mode 为 `tiered_expr`、没有旧定价模式的键、孤儿键、Claude 每档都写全 `cr / cc / cc1h`、缓存写入价是否为输入价的 1.25x（5 分钟）/ 2x（1 小时）。**它查不了价格对不对**——逐行对照官方价目表仍是人工的活，见下文。
 
 ## 架构
 
@@ -58,22 +58,25 @@ PATCH 的要点：每个模型要带 `expected_version`（快照里的 `version`
 
 **`--reset-pricing` 有破坏性**：目标系统上手工配过、但没进 `seed.json` 的定价（含图片/音频倍率）会被一并清掉。务必先 `--dry-run` 看清单。
 
-## 定价：倍率反算是核心心智模型
+## 定价：一律写计费表达式（美元绝对价）
 
-new-api 的 `ModelRatio` 以 **$2/MTok 为 1 倍**，即：
+rc.40 已把「按 Token（倍率）」「按次」两种旧定价模式标为**已弃用**；表达式模式下计费完全不读倍率表（`relay/helper/price.go` 的 `modelPriceHelperTiered`）。所以 seed 的 `pricing` 只有 `billing_expr` + `billing_mode` 两张表，系数直接是官方的 $/MTok，不再有倍率换算和循环小数的问题。例：
 
 ```
-输入价 $/MTok      = ModelRatio × 2
-输出价 $/MTok      = 输入价 × CompletionRatio
-缓存命中价 $/MTok  = 输入价 × CacheRatio
-缓存写入价 $/MTok  = 输入价 × CreateCacheRatio   （5 分钟档；Claude 1 小时档由后端按 ×1.6 自动推出）
+claude-opus-5-5  tier("standard", p * 4 + c * 20 + cr * 0.2 + cc * 5 + cc1h * 8)
+gpt-6-sol        len <= 272000 ? tier("standard", ...) : tier("long_context", ...)
 ```
 
-改动任何定价后，用这个关系反算并**逐行对照官方价目表**。例：`claude-opus-5` 倍率 `2.5 / 5 / 0.1 / 1.25` → `$5 / $25 / $0.5 / $6.25`，与 Anthropic 官方表吻合。
+变量：`p` 输入、`c` 输出、`cr` 缓存命中、`cc` 缓存写入（5 分钟）、`cc1h` 缓存写入（1 小时，Claude 专用）、`len` 上下文长度；`tier("档名", 表达式)` 声明计费档。改价后**逐行对照官方价目表**。
 
-**倍率除不尽时不要留循环小数**（会显示成 `0.024999` 之类）——改用 `billing_setting.billing_expr` 写绝对价。判断方法：拿官方价除以输入价，除不尽就别硬凑倍率。能整除就用纯倍率，不要多配表达式。
+两种用量格式对缓存 token 的处理不同，这是写表达式最容易出错的地方：
 
-`billing_expr` 的变量：`p` 输入、`c` 输出、`cr` 缓存命中、`cc` 缓存写入、`len` 上下文长度；`tier("档名", 表达式)` 声明计费档。GPT 系列用它做 272K 长上下文分档。表达式一旦用了 `cr` / `cc`，后端会从 `p` 里扣掉对应 token，所以 `p * X + cc * Y` 不会重复计费（OpenAI 的缓存写入价是**替代**普通输入价，不是叠加）。
+- **Claude 格式**：输入 token 本身不含缓存，缓存 token 不会并入 `p`。漏写 `cc` / `cc1h` 这部分**完全不计费**，漏写 `cr` 则按输入价收。所以 Claude 每一档都要写全 `p c cr cc cc1h`。
+- **OpenAI 格式**：`prompt_tokens` 含全部子类，表达式用了 `cr` / `cc` 后端就从 `p` 里扣掉，不会重复计费（OpenAI 的缓存写入价是**替代**普通输入价）。没写的子类留在 `p` 里按输入价收，所以 GPT-5.5（不收写入费）不写 `cc` 是对的。
+
+两家官方的缓存写入价都是输入价的固定倍数：5 分钟 **1.25x**、1 小时 **2x**（`--check` 会校验）。缓存命中价则各型号不同，见下文。
+
+UI 的「转换为计费表达式」按钮对 `endpoints` 用数组形式的模型会报 `The model routing configuration could not be verified`（rc.40 的转换代码只认 map 形式），不用管它，脚本直接写表达式。
 
 **统一填官方美元价**：当前收录的 OpenAI / Anthropic / xAI 全为美元计价，数字直入。系统不做汇率换算，将来若纳入非美元计价的厂商，得先定好折算口径。
 
@@ -87,17 +90,17 @@ new-api 的 `ModelRatio` 以 **$2/MTok 为 1 倍**，即：
 
 - **模型描述用代际表述**（「当前 / 上一代 / 旧版」），不写死「最强」「最快」这类绝对说法。新一代发布时只需把各档降一级，不用重写整组文案。
 
-- **添加一个模型要动 4 处**，漏配会导致计费错误：`models` 数组 + `ModelRatio` + `CompletionRatio` + `CacheRatio`，Claude 系列再加 `CreateCacheRatio`；带阶梯的再加 `billing_expr` + `billing_mode`。加完跑 `python3 provision.py --check`。
+- **添加一个模型要动 3 处**：`models` 数组 + `billing_expr` + `billing_mode`（`tiered_expr`）。加完跑 `python3 provision.py --check`。
 
-- **`CacheRatio` 不是全系 0.1**：Anthropic 从 Fable 5.1 起逐型号单独定缓存命中价——`claude-fable-5-1` 是 **0.025x**（$0.25），`claude-opus-5-5` 是 **0.05x**（$0.2），而 `claude-fable-5`、`claude-opus-5` 仍是 0.1x。新增 Claude 模型时别照抄上一代，去价目表脚注确认那一行的命中价。
+- **缓存命中价不是全系 0.1x**：Anthropic 从 Fable 5.1 起逐型号单独定命中价——`claude-fable-5-1` 是 **0.025x**（$0.25），`claude-opus-5-5` 是 **0.05x**（$0.2），而 `claude-fable-5`、`claude-opus-5` 仍是 0.1x。新增 Claude 模型时别照抄上一代的 `cr`，去价目表脚注确认那一行的命中价。
 
-- **改一个已有模型的价，四张表要一起改**：厂商降价时 `ModelRatio` / `CompletionRatio` / `CacheRatio` 和 `billing_expr` 里的绝对价必须同步，只改一处会让分档与兜底倍率打架（`--check` 会拦住 standard 档不一致）。`gpt-5.6-terra` 跟进降价（$2.5/$15 → $2/$12）时就是整组同步改的。
+- **改价时各档要一起改**：带长上下文档的模型，短档和长档（含 `cr`、`cc`）都要按官方表逐项换，只改一档会让两档对不上。`gpt-5.6-terra` 跟进降价（$2.5/$15 → $2/$12）时就是两档整组同步改的。
 
-- **`gpt-5.6` 全系已跟进官方现价**（2026-09-24）：此前 sol 保留 $5/$30、luna 保留 $1/$6 的有意偏离已取消。注意 **sol 的官方现价 $4/$20 是至少持续到 2026-11-21 的促销价**，到期后要回来复核；若官方回到 $5/$30（长档 $10/$45），倍率改回 `2.5 / 6 / 0.1`，`billing_expr` 的绝对价（含 `cc` 缓存写入档 $6.25 / $12.5）要一起换，`codex-auto-review` 也跟着改。
+- **`gpt-5.6` 全系已跟进官方现价**（2026-09-24）：此前 sol 保留 $5/$30、luna 保留 $1/$6 的有意偏离已取消。注意 **sol 的官方现价 $4/$20 是至少持续到 2026-11-21 的促销价**，到期后要回来复核；若官方回到 $5/$30（长档 $10/$45），表达式改回短档 `p * 5 + c * 30 + cr * 0.5 + cc * 6.25`、长档 `p * 10 + c * 45 + cr * 1 + cc * 12.5`，`codex-auto-review` 也跟着改。
 
 - **`codex-auto-review` 没有官方定价可核**：官方文档里 Auto-review 是 Codex 的一个功能（`approvals_reviewer = "auto_review"`，由审核子代理代替人工审批），不是公开的模型 ID（[openai/codex#20981](https://github.com/openai/codex/issues/20981) 问过它的计费身份，至今无官方回复）。本仓库按决策让它与 `gpt-5.6-sol` 同价（当前 $4/$20，长档 $8/$30），**这是自定价，不是抄来的官方价**——改它时不必去找官方表，跟着 sol 走即可。注意实际成本取决于渠道把它转发到哪个真实模型，而渠道不在种子范围内。
 
-- `claude-sonnet-5` 倍率 1（$2/$10）**已是官方标准价**：原定 2026-09-01 涨到 $3/$15 的计划被 Anthropic 明确取消，不要再按限时价处理。
+- `claude-sonnet-5` 的 $2/$10 **已是官方标准价**：原定 2026-09-01 涨到 $3/$15 的计划被 Anthropic 明确取消，不要再按限时价处理。
 
 - **`endpoints` 用数组形式声明协议**：GPT 全系声明 `["openai", "openai-response"]`（官方同时支持 Chat Completions 与 Responses，Codex 走 Responses），Claude 是 `["anthropic", "openai"]`，Grok 是 `["openai"]`。数组形式只供前端展示；定价页的端点由渠道能力推断，只有 map 形式（自定义路径）才会参与。
 
@@ -106,5 +109,5 @@ new-api 的 `ModelRatio` 以 **$2/MTok 为 1 倍**，即：
 **直接在 `master` 上提交并推送，不开子分支、不走 PR**。提交信息用简体中文单行标题、无正文，说清改了哪个模型和为什么，例如：
 
 ```
-修正 grok-4.5 缓存命中价：官方为 $0.3（倍率 0.15），此前误配成 $0.5
+修正 grok-4.5 缓存命中价：官方为 $0.3，此前误配成 $0.5
 ```
