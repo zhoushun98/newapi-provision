@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目性质
 
-把一套 new-api 的「供应商 + 模型元信息 + 计费配置」用一条命令灌进任意 new-api 实例。**没有构建、测试框架和依赖**——`provision.py` 是纯标准库脚本，`seed.json` 是权威数据。日常工作 95% 是编辑 `seed.json` 的数据，而不是改代码。脚本对齐 **new-api v1.0.0-rc.40** 的接口，更老的实例不支持。
+把一套 new-api 的「供应商 + 模型元信息 + 计费配置」用一条命令灌进任意 new-api 实例。**没有构建、测试框架和依赖**——`provision.py` 是纯标准库脚本（系统自带的 `python3` 3.9+ 即可，用到了 `str.removeprefix`；不要为它引入 uv / pyproject），`seed.json` 是权威数据。日常工作 95% 是编辑 `seed.json` 的数据，而不是改代码。脚本对齐 **new-api v1.0.0-rc.40** 的接口，更老的实例不支持。`AGENTS.md` 是指向本文件的软链，只改这里。
+
+`seed.json` 三块：`vendors`（名称 + 图标）、`models`（字段与 `/api/models/` 的列一一对应，**省略的字段按空值处理**，见 `META_DEFAULTS`）、`pricing`（只有 `billing_setting.billing_expr` 与 `billing_setting.billing_mode` 两张「模型名 → 值」的表）。
 
 ## 命令
 
@@ -23,6 +25,8 @@ python3 provision.py --base-url http://目标机:3000 --token <访问令牌> --r
 访问令牌来自目标系统：控制台 → 个人资料 → 生成访问令牌（需**超级管理员**，`/api/option/*` 走 `RootAuth`）。
 
 `--check` 覆盖：每个模型都有表达式且 mode 为 `tiered_expr`、没有旧定价模式的键、孤儿键、Claude 每档都写全 `cr / cc / cc1h`、缓存写入价是否为输入价的 1.25x（5 分钟）/ 2x（1 小时）。**它查不了价格对不对**——逐行对照官方价目表仍是人工的活，见下文。
+
+`check_expr` 的解析方式：按括号配对切档（`split_tiers`，档内可以有 `fixed()`、`max()` 等嵌套括号）；一档里没有任何 token 变量（纯按次，如 `tier("request", fixed(0.04))`）就跳过 token 检查；缓存写入的倍数只在能读出「变量 * 数字」或「数字 * 变量」这种简单项时才校验。表达式能否编译由 `--dry-run` 的后端预览把关。
 
 ## 架构
 
@@ -52,7 +56,22 @@ seed.json ──> provision.py ──> new-api REST API
 
 PATCH 的要点：每个模型要带 `expected_version`（快照里的 `version`，快照里没有的模型用 `empty_version`），冲突返回 409，说明读快照后有人改过定价，重跑即可。**清空某模型的定价是提交 `pricing: {}`**，别用 `reset: true`，那是恢复出厂默认倍率。`--dry-run` 会对每份草稿调 `POST /api/option/model_pricing/preview`（无副作用）做后端校验。
 
-**后端内置表达式**：rc.40 自带 `gpt-image-2` / `gpt-image-2.5-flare` / `gpt-image-2.5-sunburst`（图像计费要用 `img`、`img_cr` 变量，纯倍率表达不了）和 `gpt-6-astra` 四条，只作默认值、不落库，快照里 `configured` 为空，reset 不会也不需要清它们。
+**后端内置表达式**：rc.40 自带 `gpt-image-2` / `gpt-image-2.5-flare` / `gpt-image-2.5-sunburst`（图像计费，用 `img`、`img_cr` 变量）和 `gpt-6-astra` 四条，只作默认值、不落库，快照里 `configured` 为空，reset 不会也不需要清它们。
+
+**接口行为以 new-api 源码为准**，升级目标版本时先拉对应 tag 对照（文档跟不上代码）：
+
+```bash
+git clone --depth 1 --branch v1.0.0-rc.40 https://github.com/QuantumNous/new-api.git /tmp/new-api-src
+```
+
+| 要查的事 | 看哪里 |
+|---|---|
+| 路由与鉴权（哪些接口要 root） | `router/api-router.go` |
+| 按模型定价的读写、校验、版本号 | `controller/model_pricing_config.go`、`model/model_pricing_config.go`（`validateModelPricing`、`UpdateModelPricing`） |
+| 表达式变量与 token 归一化（缓存 token 是否从 `p` 扣除） | `pkg/billingexpr/expr.md`、`service/tiered_settle.go`（`BuildTieredTokenParams`） |
+| 后端内置表达式 | `setting/billing_setting/builtin_billing.go` |
+| 分页上限 | `common/page_info.go`（`GetPageQuery`） |
+| 模型元信息的新建 / 更新列 | `controller/model_meta.go`、`model/model_meta.go`（`Insert`、`Update`） |
 
 **渠道（含上游密钥）不在种子范围内**，需在目标系统手工添加；模型与渠道的绑定会自动关联。
 

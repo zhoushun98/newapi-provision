@@ -94,21 +94,45 @@ def check_seed(seed):
     return errors
 
 
+def split_tiers(expr):
+    """按括号配对切出每个 tier("档名", 档内表达式)，档内可以有 fixed()、max() 等嵌套括号。括号不配对返回 None。"""
+    tiers = []
+    for m in re.finditer(r'tier\(\s*"(\w+)"\s*,', expr):
+        depth, i = 1, m.end()
+        while i < len(expr) and depth:
+            depth += {"(": 1, ")": -1}.get(expr[i], 0)
+            i += 1
+        if depth:
+            return None
+        tiers.append((m.group(1), expr[m.end():i - 1]))
+    return tiers
+
+
 def check_expr(name, expr):
-    """逐档检查缓存相关的系数。表达式能否编译交给后端预览接口（--dry-run）。"""
-    tiers = re.findall(r'tier\("(\w+)",([^)]*)\)', expr)
+    """逐档检查 token 变量与缓存相关的系数。表达式能否编译交给后端预览接口（--dry-run）。"""
+    tiers = split_tiers(expr)
+    if tiers is None:
+        return [f"{name}: billing_expr 括号不配对"]
     if not tiers:
         return [f"{name}: billing_expr 里没有 tier(...)"]
     errors = []
     for tier, body in tiers:
-        coef = {v: float(x) for v, x in re.findall(r"\b(p|c|cr|cc|cc1h)\s*\*\s*([\d.]+)", body)}
-        if "p" not in coef or "c" not in coef:
-            errors.append(f"{name}: {tier} 档缺少 p 或 c")
-            continue
+        body = re.sub(r'"[^"]*"', '""', body)  # 去掉字符串字面量，免得误认成变量
+        used = set(re.findall(r"\b(p|c|cr|cc|cc1h)\b", body))
+        if not used:
+            continue  # 纯按次档（如 fixed(0.04)），没有 token 系数可查
+        if not {"p", "c"} <= used:
+            errors.append(f"{name}: {tier} 档按 token 计价却缺少 p 或 c")
         # Claude 格式的用量里缓存 token 不并入 p：漏写 cc / cc1h 这部分就不计费，漏写 cr 会按输入价收
-        missing = [v for v in ("cr", "cc", "cc1h") if v not in coef] if name.startswith("claude-") else []
+        missing = [v for v in ("cr", "cc", "cc1h") if v not in used] if name.startswith("claude-") else []
         if missing:
             errors.append(f"{name}: {tier} 档缺少 {', '.join(missing)}")
+        # 只有「变量 * 数字」或「数字 * 变量」的简单项能读出单价；写成 max(p, 0) * 2 这类的不做倍数校验
+        num = r"(\d+(?:\.\d+)?)"
+        coef = {v: float(x) for v, x in re.findall(rf"\b(p|c|cr|cc|cc1h)\s*\*\s*{num}", body)}
+        coef.update({v: float(x) for x, v in re.findall(rf"{num}\s*\*\s*(p|c|cr|cc|cc1h)\b", body)})
+        if "p" not in coef:
+            continue
         # OpenAI 与 Anthropic 官方的缓存写入价都是输入价的固定倍数：5 分钟 1.25x，1 小时 2x
         for v, times in (("cc", 1.25), ("cc1h", 2)):
             if v in coef and not math.isclose(coef[v], coef["p"] * times, rel_tol=1e-9):
