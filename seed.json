@@ -9,7 +9,7 @@
       "icon": "Claude.Color"
     },
     {
-      "name": "xAI",
+      "name": "Grok",
       "icon": "Grok"
     }
   ],
@@ -178,7 +178,7 @@
     },
     {
       "model_name": "grok-4.7",
-      "vendor": "xAI",
+      "vendor": "Grok",
       "icon": "Grok",
       "endpoints": "[\"openai\"]",
       "description": "xAI 当前旗舰：编码、智能体任务与知识工作，500K 上下文",
@@ -187,7 +187,7 @@
     },
     {
       "model_name": "grok-4.6",
-      "vendor": "xAI",
+      "vendor": "Grok",
       "icon": "Grok",
       "endpoints": "[\"openai\"]",
       "description": "上一代 xAI 旗舰：长程智能体、编码与研究，500K 上下文",
@@ -196,7 +196,7 @@
     },
     {
       "model_name": "grok-4.5",
-      "vendor": "xAI",
+      "vendor": "Grok",
       "icon": "Grok",
       "endpoints": "[\"openai\"]",
       "description": "旧版 xAI 旗舰：智能体编码与工程任务，500K 上下文",
@@ -208,12 +208,12 @@
     "billing_setting.billing_expr": {
       "gpt-6-astra": "len <= 272000\n  ? tier(\"standard\", p * 10 + c * 50 + cr * 1 + cc * 12.5)\n  : tier(\"long_context\", p * 20 + c * 75 + cr * 2 + cc * 25)",
       "gpt-6-sol": "len <= 272000\n  ? tier(\"standard\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5)\n  : tier(\"long_context\", p * 4 + c * 15 + cr * 0.4 + cc * 5)",
-      "gpt-6-luna": "len <= 272000\n  ? tier(\"standard\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125)\n  : tier(\"long_context\", p * 0.2 + c * 0.75 + cr * 0.02 + cc * 0.25)",
-      "gpt-5.6-sol": "len <= 272000\n  ? tier(\"standard\", p * 4 + c * 20 + cr * 0.4 + cc * 5)\n  : tier(\"long_context\", p * 8 + c * 30 + cr * 0.8 + cc * 10)",
+      "gpt-6-luna": "len <= 272000\n  ? tier(\"standard\", p * 0.5 + c * 2.5 + cr * 0.05 + cc * 0.625)\n  : tier(\"long_context\", p * 1 + c * 3.75 + cr * 0.1 + cc * 1.25)",
+      "gpt-5.6-sol": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1 + cc * 12.5)",
       "gpt-5.6-terra": "len <= 272000\n  ? tier(\"standard\", p * 2 + c * 12 + cr * 0.2 + cc * 2.5)\n  : tier(\"long_context\", p * 4 + c * 18 + cr * 0.4 + cc * 5)",
-      "gpt-5.6-luna": "len <= 272000\n  ? tier(\"standard\", p * 0.2 + c * 1.2 + cr * 0.02 + cc * 0.25)\n  : tier(\"long_context\", p * 0.4 + c * 1.8 + cr * 0.04 + cc * 0.5)",
+      "gpt-5.6-luna": "len <= 272000\n  ? tier(\"standard\", p * 1 + c * 6 + cr * 0.1 + cc * 1.25)\n  : tier(\"long_context\", p * 2 + c * 9 + cr * 0.2 + cc * 2.5)",
       "gpt-5.5": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1)",
-      "codex-auto-review": "len <= 272000\n  ? tier(\"standard\", p * 4 + c * 20 + cr * 0.4 + cc * 5)\n  : tier(\"long_context\", p * 8 + c * 30 + cr * 0.8 + cc * 10)",
+      "codex-auto-review": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1 + cc * 12.5)",
       "claude-fable-5-1": "tier(\"standard\", p * 10 + c * 50 + cr * 0.25 + cc * 12.5 + cc1h * 20)",
       "claude-fable-5": "tier(\"standard\", p * 10 + c * 50 + cr * 1 + cc * 12.5 + cc1h * 20)",
       "claude-opus-5-5": "tier(\"standard\", p * 4 + c * 20 + cr * 0.2 + cc * 5 + cc1h * 8)",
