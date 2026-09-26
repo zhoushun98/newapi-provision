@@ -87,6 +87,33 @@
       "name_rule": 0
     },
     {
+      "model_name": "gpt-image-2.5-sunburst",
+      "vendor": "OpenAI",
+      "icon": "OpenAI",
+      "endpoints": "[\"image-generation\"]",
+      "description": "当前 GPT Image 精修档：图像生成与编辑，适合重视编辑精度的场景",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
+      "model_name": "gpt-image-2.5-flare",
+      "vendor": "OpenAI",
+      "icon": "OpenAI",
+      "endpoints": "[\"image-generation\"]",
+      "description": "当前 GPT Image 快速档：日常高质量图像生成与编辑",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
+      "model_name": "gpt-image-2",
+      "vendor": "OpenAI",
+      "icon": "OpenAI",
+      "endpoints": "[\"image-generation\"]",
+      "description": "上一代 GPT Image：图像生成与编辑",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
       "model_name": "claude-fable-5-1",
       "vendor": "Anthropic",
       "icon": "Claude.Color",
@@ -214,6 +241,9 @@
       "gpt-5.6-luna": "len <= 272000\n  ? tier(\"standard\", p * 1 + c * 6 + cr * 0.1 + cc * 1.25)\n  : tier(\"long_context\", p * 2 + c * 9 + cr * 0.2 + cc * 2.5)",
       "gpt-5.5": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1)",
       "codex-auto-review": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1 + cc * 12.5)",
+      "gpt-image-2.5-sunburst": "tier(\"image\", fixed(0.1)) * image_count",
+      "gpt-image-2.5-flare": "tier(\"image\", fixed(0.1)) * image_count",
+      "gpt-image-2": "tier(\"image\", fixed(0.1)) * image_count",
       "claude-fable-5-1": "tier(\"standard\", p * 10 + c * 50 + cr * 0.25 + cc * 12.5 + cc1h * 20)",
       "claude-fable-5": "tier(\"standard\", p * 10 + c * 50 + cr * 1 + cc * 12.5 + cc1h * 20)",
       "claude-opus-5-5": "tier(\"standard\", p * 4 + c * 20 + cr * 0.2 + cc * 5 + cc1h * 8)",
@@ -237,6 +267,9 @@
       "gpt-5.6-luna": "tiered_expr",
       "gpt-5.5": "tiered_expr",
       "codex-auto-review": "tiered_expr",
+      "gpt-image-2.5-sunburst": "tiered_expr",
+      "gpt-image-2.5-flare": "tiered_expr",
+      "gpt-image-2": "tiered_expr",
       "claude-fable-5-1": "tiered_expr",
       "claude-fable-5": "tiered_expr",
       "claude-opus-5-5": "tiered_expr",

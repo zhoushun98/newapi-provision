@@ -56,7 +56,7 @@ seed.json ──> provision.py ──> new-api REST API
 
 PATCH 的要点：每个模型要带 `expected_version`（快照里的 `version`，快照里没有的模型用 `empty_version`），冲突返回 409，说明读快照后有人改过定价，重跑即可。**清空某模型的定价是提交 `pricing: {}`**，别用 `reset: true`，那是恢复出厂默认倍率。`--dry-run` 会对每份草稿调 `POST /api/option/model_pricing/preview`（无副作用）做后端校验。
 
-**后端内置表达式**：rc.40 自带 `gpt-image-2` / `gpt-image-2.5-flare` / `gpt-image-2.5-sunburst`（图像计费，用 `img`、`img_cr` 变量）和 `gpt-6-astra` 四条，只作默认值、不落库，快照里 `configured` 为空，reset 不会也不需要清它们。
+**后端内置表达式**：rc.40 自带 `gpt-image-2` / `gpt-image-2.5-flare` / `gpt-image-2.5-sunburst`（图像计费，用 `img`、`img_cr` 变量）和 `gpt-6-astra` 四条，只作默认值、不落库，快照里 `configured` 为空，reset 不会也不需要清它们。seed 给这四个都配了表达式，已配置的优先（`GetBillingExpr` 先读库里的值，没有才回落到内置）。
 
 **接口行为以 new-api 源码为准**，升级目标版本时先拉对应 tag 对照（文档跟不上代码）：
 
@@ -119,9 +119,11 @@ UI 的「转换为计费表达式」按钮对 `endpoints` 用数组形式的模�
 
 - **`codex-auto-review` 没有官方定价可核**：官方文档里 Auto-review 是 Codex 的一个功能（`approvals_reviewer = "auto_review"`，由审核子代理代替人工审批），不是公开的模型 ID（[openai/codex#20981](https://github.com/openai/codex/issues/20981) 问过它的计费身份，至今无官方回复）。本仓库按决策让它与 `gpt-5.6-sol` 同价（当前 $5/$30，长档 $10/$45），**这是自定价，不是抄来的官方价**——改它时不必去找官方表，跟着 sol 走即可。注意实际成本取决于渠道把它转发到哪个真实模型，而渠道不在种子范围内。
 
+- **GPT Image 三个模型按张自定价 $0.1**（2026-09-26 决策）：`gpt-image-2.5-sunburst` / `gpt-image-2.5-flare` / `gpt-image-2` 都写 `tier("image", fixed(0.1)) * image_count`，按生成张数计（`image_count` 取请求顶层 `n`，`n=4` 收 $0.4），**不是按请求**——别改成 `tier("request", fixed(0.1))`，那样一次请求能白拿多张图。官方是按 token 计价（文本输入 $5、图片输入 $8、输出 $30），这里是自定价，不必对照官方表。`fixed()` 所在的档不能再加 token 项，`image_count` 只能作乘数。
+
 - `claude-sonnet-5` 的 $2/$10 **已是官方标准价**：原定 2026-09-01 涨到 $3/$15 的计划被 Anthropic 明确取消，不要再按限时价处理。
 
-- **`endpoints` 用数组形式声明协议**：GPT 全系声明 `["openai", "openai-response"]`（官方同时支持 Chat Completions 与 Responses，Codex 走 Responses），Claude 是 `["anthropic", "openai"]`，Grok 是 `["openai"]`。数组形式只供前端展示；定价页的端点由渠道能力推断，只有 map 形式（自定义路径）才会参与。
+- **`endpoints` 用数组形式声明协议**：GPT 全系声明 `["openai", "openai-response"]`（官方同时支持 Chat Completions 与 Responses，Codex 走 Responses），Claude 是 `["anthropic", "openai"]`，Grok 是 `["openai"]`，GPT Image 是 `["image-generation"]`。数组形式只供前端展示；定价页的端点由渠道能力推断，只有 map 形式（自定义路径）才会参与。
 
 ## Git 约定
 
