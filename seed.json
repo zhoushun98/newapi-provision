@@ -177,11 +177,20 @@
       "name_rule": 0
     },
     {
+      "model_name": "claude-sonnet-5-5",
+      "vendor": "Anthropic",
+      "icon": "Claude.Color",
+      "endpoints": "[\"anthropic\", \"openai\"]",
+      "description": "当前 Sonnet：速度与能力兼顾，适合日常编码、智能体与企业级工作，与上一代同价",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
       "model_name": "claude-sonnet-5",
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "当前 Sonnet：速度与智能兼顾，以 Sonnet 价格获得接近 Opus 的编码与智能体能力",
+      "description": "上一代 Sonnet：以 Sonnet 价格获得接近 Opus 的编码与智能体能力",
       "status": 1,
       "name_rule": 0
     },
@@ -190,7 +199,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "上一代 Sonnet：速度与智能均衡",
+      "description": "旧版 Sonnet：速度与智能均衡",
       "status": 1,
       "name_rule": 0
     },
@@ -251,6 +260,7 @@
       "claude-opus-4-8": "tier(\"standard\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)",
       "claude-opus-4-7": "tier(\"standard\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)",
       "claude-opus-4-6": "tier(\"standard\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)",
+      "claude-sonnet-5-5": "tier(\"standard\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5 + cc1h * 4)",
       "claude-sonnet-5": "tier(\"standard\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5 + cc1h * 4)",
       "claude-sonnet-4-6": "tier(\"standard\", p * 3 + c * 15 + cr * 0.3 + cc * 3.75 + cc1h * 6)",
       "claude-haiku-4-5-20251001": "tier(\"standard\", p * 1 + c * 5 + cr * 0.1 + cc * 1.25 + cc1h * 2)",
@@ -277,6 +287,7 @@
       "claude-opus-4-8": "tiered_expr",
       "claude-opus-4-7": "tiered_expr",
       "claude-opus-4-6": "tiered_expr",
+      "claude-sonnet-5-5": "tiered_expr",
       "claude-sonnet-5": "tiered_expr",
       "claude-sonnet-4-6": "tiered_expr",
       "claude-haiku-4-5-20251001": "tiered_expr",
