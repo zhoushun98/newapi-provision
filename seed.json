@@ -24,6 +24,15 @@
       "name_rule": 0
     },
     {
+      "model_name": "gpt-6.1-sol",
+      "vendor": "OpenAI",
+      "icon": "OpenAI",
+      "endpoints": "[\"openai\", \"openai-response\"]",
+      "description": "GPT-6 均衡型升级版，能力接近 Astra、成本更低，适合复杂编码、计算机使用与专业工作",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
       "model_name": "gpt-6-sol",
       "vendor": "OpenAI",
       "icon": "OpenAI",
@@ -243,6 +252,7 @@
   "pricing": {
     "billing_setting.billing_expr": {
       "gpt-6-astra": "len <= 272000\n  ? tier(\"standard\", p * 10 + c * 50 + cr * 1 + cc * 12.5)\n  : tier(\"long_context\", p * 20 + c * 75 + cr * 2 + cc * 25)",
+      "gpt-6.1-sol": "len <= 272000\n  ? tier(\"standard\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5)\n  : tier(\"long_context\", p * 4 + c * 15 + cr * 0.2 + cc * 5)",
       "gpt-6-sol": "len <= 272000\n  ? tier(\"standard\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5)\n  : tier(\"long_context\", p * 4 + c * 15 + cr * 0.4 + cc * 5)",
       "gpt-6-luna": "len <= 272000\n  ? tier(\"standard\", p * 0.5 + c * 2.5 + cr * 0.05 + cc * 0.625)\n  : tier(\"long_context\", p * 1 + c * 3.75 + cr * 0.1 + cc * 1.25)",
       "gpt-5.6-sol": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 1 + cc * 12.5)",
@@ -270,6 +280,7 @@
     },
     "billing_setting.billing_mode": {
       "gpt-6-astra": "tiered_expr",
+      "gpt-6.1-sol": "tiered_expr",
       "gpt-6-sol": "tiered_expr",
       "gpt-6-luna": "tiered_expr",
       "gpt-5.6-sol": "tiered_expr",
