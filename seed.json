@@ -19,7 +19,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"openai\", \"openai-response\"]",
-      "description": "当前旗舰 GPT：最高难度的端到端工作与长程智能体任务",
+      "description": "GPT-6 旗舰，擅长复杂推理、编码、计算机使用与深度研究",
       "status": 1,
       "name_rule": 0
     },
@@ -37,7 +37,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"openai\", \"openai-response\"]",
-      "description": "当前 GPT-6 均衡档：复杂编码与智能体工作流",
+      "description": "GPT-6 均衡型，兼顾能力与成本，适合复杂编码与智能体工作流",
       "status": 1,
       "name_rule": 0
     },
@@ -46,7 +46,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"openai\", \"openai-response\"]",
-      "description": "当前 GPT-6 经济档：专注型、高并发任务",
+      "description": "GPT-6 高性价比型，适合专注型、大批量任务",
       "status": 1,
       "name_rule": 0
     },
@@ -55,7 +55,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"openai\", \"openai-response\"]",
-      "description": "上一代 GPT-5.6 高配档：复杂专业工作、编码与智能体工作流",
+      "description": "GPT-5.6 高配型，适合复杂专业工作、编码与智能体工作流",
       "status": 1,
       "name_rule": 0
     },
@@ -64,7 +64,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"openai\", \"openai-response\"]",
-      "description": "上一代 GPT-5.6 均衡档：接近高配档的质量，成本显著更低",
+      "description": "GPT-5.6 均衡型，以较低成本胜任日常主力工作",
       "status": 1,
       "name_rule": 0
     },
@@ -73,7 +73,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"openai\", \"openai-response\"]",
-      "description": "上一代 GPT-5.6 经济档：快速、适合生产环境高频调用",
+      "description": "GPT-5.6 高性价比型，响应快，适合大批量调用",
       "status": 1,
       "name_rule": 0
     },
@@ -82,7 +82,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"openai\", \"openai-response\"]",
-      "description": "旧版旗舰 GPT：编码、计算机使用、研究与知识工作",
+      "description": "通用型，擅长编码、计算机使用、研究与知识工作",
       "status": 1,
       "name_rule": 0
     },
@@ -91,7 +91,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"openai\", \"openai-response\"]",
-      "description": "Codex Auto-review 专用：由审核子代理代替人工审批操作请求",
+      "description": "Codex 自动审批专用，由审核子代理代替人工确认操作请求",
       "status": 1,
       "name_rule": 0
     },
@@ -100,7 +100,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"image-generation\"]",
-      "description": "当前 GPT Image 精修档：图像生成与编辑，适合重视编辑精度的场景",
+      "description": "GPT Image 2.5 高画质型，适合对画质与编辑精度要求高的图像生成和编辑",
       "status": 1,
       "name_rule": 0
     },
@@ -109,7 +109,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"image-generation\"]",
-      "description": "当前 GPT Image 快速档：日常高质量图像生成与编辑",
+      "description": "GPT Image 2.5 快速型，适合日常高质量图像生成与编辑",
       "status": 1,
       "name_rule": 0
     },
@@ -118,7 +118,7 @@
       "vendor": "OpenAI",
       "icon": "OpenAI",
       "endpoints": "[\"image-generation\"]",
-      "description": "上一代 GPT Image：图像生成与编辑",
+      "description": "按提示词生成与编辑图像，适合视觉设计工作流",
       "status": 1,
       "name_rule": 0
     },
@@ -127,7 +127,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "当前最高端 Claude：高难度推理与长程智能体任务（思考常开，缓存命中仅 2.5%）",
+      "description": "Claude 顶配系列，擅长高难度推理与长程智能体任务",
       "status": 1,
       "name_rule": 0
     },
@@ -136,7 +136,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "上一代 Fable：最高难度推理与长程智能体任务（思考常开）",
+      "description": "Claude 顶配系列，擅长深度推理、分析与长程智能体任务",
       "status": 1,
       "name_rule": 0
     },
@@ -145,7 +145,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "当前 Opus：长程智能体编码与知识工作，比上一代更便宜（缓存命中仅 5%）",
+      "description": "擅长长时间运行的智能体编码与知识工作",
       "status": 1,
       "name_rule": 0
     },
@@ -154,7 +154,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "上一代 Opus：复杂智能体编码与企业级工作，与 4.8 同价",
+      "description": "擅长复杂智能体编码与专业工作",
       "status": 1,
       "name_rule": 0
     },
@@ -163,7 +163,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "旧版 Opus：长程智能体执行、知识工作与记忆",
+      "description": "擅长高难度推理、编码与长程智能体任务",
       "status": 1,
       "name_rule": 0
     },
@@ -172,7 +172,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "旧版 Opus：长程智能体、视觉与记忆能力强",
+      "description": "擅长高级软件工程与复杂推理，视觉能力强",
       "status": 1,
       "name_rule": 0
     },
@@ -181,7 +181,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "旧版 Opus：首代支持自适应思考",
+      "description": "擅长高难度编码、任务规划与深度推理",
       "status": 1,
       "name_rule": 0
     },
@@ -190,7 +190,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "当前 Sonnet：速度与能力兼顾，适合日常编码、智能体与企业级工作，与上一代同价",
+      "description": "兼顾速度与智能，适合日常编码、智能体与知识工作",
       "status": 1,
       "name_rule": 0
     },
@@ -199,7 +199,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "上一代 Sonnet：以 Sonnet 价格获得接近 Opus 的编码与智能体能力",
+      "description": "日常主力，擅长编码、规划、网页浏览与通用任务",
       "status": 1,
       "name_rule": 0
     },
@@ -208,7 +208,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "旧版 Sonnet：速度与智能均衡",
+      "description": "兼顾速度与质量，适合编码智能体与成本敏感的生产任务",
       "status": 1,
       "name_rule": 0
     },
@@ -217,7 +217,7 @@
       "vendor": "Anthropic",
       "icon": "Claude.Color",
       "endpoints": "[\"anthropic\", \"openai\"]",
-      "description": "当前 Haiku：轻量快速、成本低，适合简单与高并发任务",
+      "description": "轻量快速、成本低，智能接近前沿，适合实时对话、分类与高并发任务",
       "status": 1,
       "name_rule": 0
     },
@@ -226,7 +226,7 @@
       "vendor": "Grok",
       "icon": "Grok",
       "endpoints": "[\"openai\"]",
-      "description": "xAI 当前旗舰：编码、智能体任务与知识工作，500K 上下文",
+      "description": "擅长编码、智能体任务与知识工作",
       "status": 1,
       "name_rule": 0
     },
@@ -235,7 +235,7 @@
       "vendor": "Grok",
       "icon": "Grok",
       "endpoints": "[\"openai\"]",
-      "description": "上一代 xAI 旗舰：长程智能体、编码与研究，500K 上下文",
+      "description": "擅长长程智能体、编码与研究",
       "status": 1,
       "name_rule": 0
     },
@@ -244,7 +244,7 @@
       "vendor": "Grok",
       "icon": "Grok",
       "endpoints": "[\"openai\"]",
-      "description": "旧版 xAI 旗舰：智能体编码与工程任务，500K 上下文",
+      "description": "擅长智能体编码与工程任务",
       "status": 1,
       "name_rule": 0
     }

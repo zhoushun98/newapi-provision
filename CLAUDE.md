@@ -2,132 +2,116 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 项目性质
+## 项目概况
 
-把一套 new-api 的「供应商 + 模型元信息 + 计费配置」用一条命令灌进任意 new-api 实例。**没有构建、测试框架和依赖**——`provision.py` 是纯标准库脚本（系统自带的 `python3` 3.9+ 即可，用到了 `str.removeprefix`；不要为它引入 uv / pyproject），`seed.json` 是权威数据。日常工作 95% 是编辑 `seed.json` 的数据，而不是改代码。脚本对齐 **new-api v1.0.0-rc.40** 的接口，更老的实例不支持。`AGENTS.md` 是指向本文件的软链，只改这里。
+把一套 new-api 的「供应商 + 模型元信息 + 计费配置」用一条命令灌进任意 new-api 实例。
 
-`seed.json` 三块：`vendors`（名称 + 图标）、`models`（字段与 `/api/models/` 的列一一对应，**省略的字段按空值处理**，见 `META_DEFAULTS`）、`pricing`（只有 `billing_setting.billing_expr` 与 `billing_setting.billing_mode` 两张「模型名 → 值」的表）。
+- `seed.json`：权威数据，日常工作绝大多数是改它。三块：`vendors`（名称 + 图标）、`models`（字段对应 `/api/models/` 的列，**省略即空值**，见 `META_DEFAULTS`）、`pricing`（只有 `billing_setting.billing_expr` 与 `billing_setting.billing_mode` 两张「模型名 → 值」表）。
+- `provision.py`：把 seed 幂等地写进实例。纯标准库，系统 `python3`（3.9+）直接跑，**不要引入 uv / pyproject / 第三方依赖**。
+- `README.md` 面向使用者，也列了模型数量和价格说明，改 seed 时一并更新。`AGENTS.md` 是本文件的软链，只改这里。
+
+目标版本 **new-api v1.0.0-rc.41**（rc.40 也能用，更老的不支持）。
 
 ## 命令
 
 ```bash
-# 离线自检 seed.json（无实例也能跑，本仓库唯一的"测试"；灌入前也会自动跑）
-python3 provision.py --check
+python3 provision.py --check   # 离线自检 seed.json，本仓库唯一的"测试"；灌入前也会自动跑
 
-# 灌入配置（务必先 --dry-run 预览）
-python3 provision.py --base-url http://目标机:3000 --token <访问令牌> --dry-run
-python3 provision.py --base-url http://目标机:3000 --token <访问令牌>
-
-# 全新系统：清掉出厂自带的过时模型定价
-python3 provision.py --base-url http://目标机:3000 --token <访问令牌> --reset-pricing --dry-run
+python3 provision.py --base-url http://目标机:3000 --token <访问令牌> --dry-run   # 先预览
+python3 provision.py --base-url http://目标机:3000 --token <访问令牌>             # 再灌入
+# 全新系统加 --reset-pricing：连 seed 之外的模型定价也清空（有破坏性，务必先 --dry-run 看清单）
 ```
 
-访问令牌来自目标系统：控制台 → 个人资料 → 生成访问令牌（需**超级管理员**，`/api/option/*` 走 `RootAuth`）。
+访问令牌：目标系统 控制台 → 个人资料 → 访问令牌。必须属于**超级管理员**（`/api/option/*` 走 `RootAuth`）；rc.41 的 `nap_` 令牌按权限授权，要勾选「模型」与「系统设置」的查看 + 编辑（`model:read/write`、`option:read/write`），缺了报 403 `ACCESS_TOKEN_SCOPE_DENIED`。rc.40 的旧令牌在实例升级后 30 天内仍可用。
 
-`--check` 覆盖：每个模型都有表达式且 mode 为 `tiered_expr`、没有旧定价模式的键、孤儿键、Claude 每档都写全 `cr / cc / cc1h`、缓存写入价是否为输入价的 1.25x（5 分钟）/ 2x（1 小时）。**它查不了价格对不对**——逐行对照官方价目表仍是人工的活，见下文。
-
-`check_expr` 的解析方式：按括号配对切档（`split_tiers`，档内可以有 `fixed()`、`max()` 等嵌套括号）；一档里没有任何 token 变量（纯按次，如 `tier("request", fixed(0.04))`）就跳过 token 检查；缓存写入的倍数只在能读出「变量 * 数字」或「数字 * 变量」这种简单项时才校验。表达式能否编译由 `--dry-run` 的后端预览把关。
+`--check` 查结构和倍数：每个模型都有表达式且 mode 为 `tiered_expr`、没有旧定价键、没有孤儿键、Claude 每档写全 `cr/cc/cc1h`、缓存写入是输入价的 1.25x / 2x。**价格数字对不对它查不了**；表达式能否编译由 `--dry-run` 调后端预览接口把关。
 
 ## 架构
 
-单向数据流，`provision.py` 只是 `seed.json` 的幂等执行器：
+`seed.json → provision.py → new-api REST API`，按顺序三阶段（供应商须先于模型），每段幂等策略不同：
 
-```
-seed.json ──> provision.py ──> new-api REST API
-             （三阶段，供应商必须先于模型）
-```
-
-三个阶段的幂等策略各不相同，这是读代码才能看出的关键差异：
-
-| 阶段 | 接口 | 幂等策略 |
+| 阶段 | 接口 | 策略 |
 |---|---|---|
-| `vendors` | `GET/POST /api/vendors/` | 按名称查重；已存在则**完全不动**（不覆盖手工修改） |
-| `models` | `GET/POST/PUT /api/models/` | 按名称查重；已存在则逐字段对照 seed（描述/图标/标签/端点/状态/匹配规则/供应商），**有差异就覆盖** |
-| `pricing` | `GET/PATCH /api/option/model_pricing` | seed 内的模型**按模型整体替换**；`--reset-pricing` 另把 seed 外的模型清空；全部变更合成一个 PATCH |
+| 供应商 | `GET/POST /api/vendors/` | 按名称查重，已存在**不动** |
+| 模型元信息 | `GET/POST/PUT /api/models/` | 按名称查重，已存在则逐字段对照 seed，**有差异就覆盖** |
+| 定价 | `GET/PATCH /api/option/model_pricing` | seed 内的模型**整体替换**；`--reset-pricing` 另清空 seed 外的；全部变更合成一个 PATCH，单事务，任一不合法整批失败 |
 
-**分页**：rc.40 把 `page_size` 截断到 100，列表必须翻页（`list_all`），否则超过 100 个模型的实例会把后面的当成不存在、POST 时撞上「模型名称已存在」。
+读代码看不出来的约束：
 
-**模型更新**：`PUT /api/models/` 会整行覆盖 `model_name / description / icon / tags / vendor_id / endpoints / status / sync_official / name_rule` 这些列，请求体必须带齐，**`sync_official` 要原样带回**，否则被清成 0。新建时显式传 `sync_official: 0`：seed 是元信息的权威，关掉「同步官方元数据」以免被上游覆盖。
+- **分页**：`page_size` 被截断到 100，列表必须翻页（`list_all`），否则第 100 个之后的模型会被当成不存在，POST 时撞「模型名称已存在」。
+- **模型 PUT 整行覆盖**：请求体要带齐所有列，`sync_official` 要原样带回，否则被清成 0。新建时显式传 `sync_official: 0`，免得「同步官方元数据」覆盖 seed 的文案。
+- **定价只走 PATCH `model_pricing`，别改回 `PUT /api/option/`**：按单个 key 写有顺序死结（新增阶梯模型要先写 expr 再写 mode，删除则相反，否则报 `billing expression is required`）；且 `GET /api/option/` 返回的是混入后端内置表达式的生效值，回写会把内置条目固化进库。快照里的 `configured` 才是真正落库的值。
+- **PATCH 细节**：每个模型带 `expected_version`（快照里没有的模型用 `empty_version`），409 表示读快照后有人改过定价，重跑即可。清空某模型的定价是提交 `pricing: {}`；`reset: true` 是恢复出厂默认，别用。
+- **后端内置表达式**：`gpt-image-2`、`gpt-image-2.5-flare`、`gpt-image-2.5-sunburst`、`gpt-6-astra` 自带默认表达式，不落库（`configured` 为空，reset 不用管）。seed 给它们都配了定价，库里有值时优先于内置。
+- **网络重试**：urllib 每个请求都新建 TLS 连接，偶有握手被掐或连接被断。`api()` 最多尝试 `NET_RETRIES` 次：请求没发出去（`URLError`）任何方法都重发；已发出但没收到响应的只重发 GET / PUT / 预览，POST 新建和 PATCH 定价直接报错让人重跑（脚本幂等）。
+- **不在范围内**：渠道（含上游密钥）需在实例上手工加。从 seed 删掉的模型和供应商不会从实例删除，定价只有 `--reset-pricing` 才会清。
 
-**为什么定价不走 `PUT /api/option/`**（rc.40 仍兼容，但有两个坑，全新实例或有残留时才暴露）：
-
-- rc.40 把定价类 key 的 PUT 也路由到统一的 `UpdateModelPricingOptions`，对「新旧两张表涉及的每个模型」做整体校验。按单个 key 覆盖写就有**顺序死结**：新增阶梯模型要先写 `billing_expr` 再写 `billing_mode`，删掉阶梯模型却要反过来，否则 mode 还标着 `tiered_expr` 而表达式没了，报 `billing expression is required`。实例上残留 seed 已删的阶梯模型（如 `gpt-5.4`）时，旧脚本的 `--reset-pricing` 就是这样整批失败的，已在测试环境复现。
-- `GET /api/option/` 返回的 `billing_setting.*` 是**生效值**，混入了后端内置表达式；拿它合并再 PUT 回去会把内置条目固化进库。`model_pricing` 快照的 `configured` 只含真正落库的值。
-
-PATCH 的要点：每个模型要带 `expected_version`（快照里的 `version`，快照里没有的模型用 `empty_version`），冲突返回 409，说明读快照后有人改过定价，重跑即可。**清空某模型的定价是提交 `pricing: {}`**，别用 `reset: true`，那是恢复出厂默认倍率。`--dry-run` 会对每份草稿调 `POST /api/option/model_pricing/preview`（无副作用）做后端校验。
-
-**后端内置表达式**：rc.40 自带 `gpt-image-2` / `gpt-image-2.5-flare` / `gpt-image-2.5-sunburst`（图像计费，用 `img`、`img_cr` 变量）和 `gpt-6-astra` 四条，只作默认值、不落库，快照里 `configured` 为空，reset 不会也不需要清它们。seed 给这四个都配了表达式，已配置的优先（`GetBillingExpr` 先读库里的值，没有才回落到内置）。
-
-**接口行为以 new-api 源码为准**，升级目标版本时先拉对应 tag 对照（文档跟不上代码）：
+接口行为以 new-api 源码为准（文档跟不上代码），升级目标版本时拉对应 tag 对照：
 
 ```bash
-git clone --depth 1 --branch v1.0.0-rc.40 https://github.com/QuantumNous/new-api.git /tmp/new-api-src
+git clone --depth 1 --branch v1.0.0-rc.41 https://github.com/QuantumNous/new-api.git /tmp/new-api-src
 ```
 
 | 要查的事 | 看哪里 |
 |---|---|
-| 路由与鉴权（哪些接口要 root） | `router/api-router.go` |
-| 按模型定价的读写、校验、版本号 | `controller/model_pricing_config.go`、`model/model_pricing_config.go`（`validateModelPricing`、`UpdateModelPricing`） |
-| 表达式变量与 token 归一化（缓存 token 是否从 `p` 扣除） | `pkg/billingexpr/expr.md`、`service/tiered_settle.go`（`BuildTieredTokenParams`） |
+| 路由与鉴权 | `router/api-router.go` |
+| 访问令牌各路由要求的 scope | `middleware/access_token_routes.go`、`service/access_token_scope.go` |
+| 按模型定价的读写、校验、版本号 | `controller/model_pricing_config.go`、`model/model_pricing_config.go` |
+| 表达式语法、变量、token 归一化 | `pkg/billingexpr/expr.md`、`service/tiered_settle.go`（`BuildTieredTokenParams`） |
 | 后端内置表达式 | `setting/billing_setting/builtin_billing.go` |
-| 分页上限 | `common/page_info.go`（`GetPageQuery`） |
-| 模型元信息的新建 / 更新列 | `controller/model_meta.go`、`model/model_meta.go`（`Insert`、`Update`） |
+| 分页上限 | `common/page_info.go` |
+| 模型元信息的新建 / 更新列 | `controller/model_meta.go`、`model/model_meta.go` |
 
-**渠道（含上游密钥）不在种子范围内**，需在目标系统手工添加；模型与渠道的绑定会自动关联。
+## 定价表达式
 
-**`--reset-pricing` 有破坏性**：目标系统上手工配过、但没进 `seed.json` 的定价（含图片/音频倍率）会被一并清掉。务必先 `--dry-run` 看清单。
-
-## 定价：一律写计费表达式（美元绝对价）
-
-rc.40 已把「按 Token（倍率）」「按次」两种旧定价模式标为**已弃用**；表达式模式下计费完全不读倍率表（`relay/helper/price.go` 的 `modelPriceHelperTiered`）。所以 seed 的 `pricing` 只有 `billing_expr` + `billing_mode` 两张表，系数直接是官方的 $/MTok，不再有倍率换算和循环小数的问题。例：
+rc.40 起倍率 / 按次两种旧模式已弃用，seed 只写计费表达式，系数直接是官方美元价（$/MTok）；`--check` 会拒绝 `ModelRatio` 等旧键。
 
 ```
 claude-opus-5-5  tier("standard", p * 4 + c * 20 + cr * 0.2 + cc * 5 + cc1h * 8)
 gpt-6-sol        len <= 272000 ? tier("standard", ...) : tier("long_context", ...)
+gpt-image-2      tier("image", fixed(0.1)) * image_count
 ```
 
-变量：`p` 输入、`c` 输出、`cr` 缓存命中、`cc` 缓存写入（5 分钟）、`cc1h` 缓存写入（1 小时，Claude 专用）、`len` 上下文长度；`tier("档名", 表达式)` 声明计费档。改价后**逐行对照官方价目表**。
+变量：`p` 输入、`c` 输出、`cr` 缓存命中、`cc` 缓存写入（5 分钟）、`cc1h` 缓存写入（1 小时，仅 Claude）、`len` 上下文长度。
 
-两种用量格式对缓存 token 的处理不同，这是写表达式最容易出错的地方：
+**缓存 token 的归一化两家不同**，最容易写错：
 
-- **Claude 格式**：输入 token 本身不含缓存，缓存 token 不会并入 `p`。漏写 `cc` / `cc1h` 这部分**完全不计费**，漏写 `cr` 则按输入价收。所以 Claude 每一档都要写全 `p c cr cc cc1h`。
-- **OpenAI 格式**：`prompt_tokens` 含全部子类，表达式用了 `cr` / `cc` 后端就从 `p` 里扣掉，不会重复计费（OpenAI 的缓存写入价是**替代**普通输入价）。没写的子类留在 `p` 里按输入价收，所以 GPT-5.5（不收写入费）不写 `cc` 是对的。
+- **Claude**：`p` 不含缓存。没写 `cr` 时命中 token 并入 `p` 按输入价收；没写 `cc` / `cc1h` 则这部分**完全不计费**。所以 Claude 每档都要写全 `p c cr cc cc1h`。
+- **OpenAI**：`p` 含全部缓存。写了 `cr` / `cc` 就从 `p` 里扣出来单独计价，没写的留在 `p` 按输入价收。所以 GPT-5.5（不收写入费）不写 `cc` 是对的。
 
-两家官方的缓存写入价都是输入价的固定倍数：5 分钟 **1.25x**、1 小时 **2x**（`--check` 会校验）。缓存命中价则各型号不同，见下文。
+**价格规律**：缓存写入 = 输入价 × 1.25（5 分钟）/ × 2（1 小时），两家一样。缓存命中价**逐型号不同**，不是全系 0.1x（如 `claude-fable-5-1` 0.025x，`claude-opus-5-5`、`gpt-6.1-sol` 0.05x），新增模型别照抄上一代——`gpt-6.1-sol` 与 `gpt-6-sol` 只差命中价。
 
-UI 的「转换为计费表达式」按钮对 `endpoints` 用数组形式的模型会报 `The model routing configuration could not be verified`（rc.40 的转换代码只认 map 形式），不用管它，脚本直接写表达式。
+**长上下文**：整单按高档计费（不是超出部分才涨），阈值边界各家不同——GPT 输入**超过** 272K 才涨（短档 `len <= 272000`），Grok **达到** 200K 就涨（短档 `len < 200000`），Claude 1M 内不分档。
 
-**统一填官方美元价**：当前收录的 OpenAI / Anthropic / xAI 全为美元计价，数字直入。系统不做汇率换算，将来若纳入非美元计价的厂商，得先定好折算口径。
+**`fixed()`** 是按次 / 按张的完整价格，所在的档不能再加 token 项，只能乘 `image_count`（取请求顶层 `n`）。
 
-## 数据纪律（历史上踩过的坑）
+## 数据纪律
 
-- **定价必须能从官方一手来源核实**，核不到的档位就不配，退回能核实的标准价。典型回退：`grok-4.5` 长上下文阶梯因高档价无法核实而撤销（`8a6e978`）。另一类常犯的错是**把同系列上一个小版本的价错配到新版本上**——同系列相邻版本可能完全不同价，逐位对着目标版本那一行抄。**核不到只是当时的状态，厂商补上文档后要回来补配**——Grok 的 200K 阶梯就是这样在官方价目页列出完整高档价后补回的。查价用官方文档页：Anthropic 是 `platform.claude.com/docs/en/about-claude/pricing.md`（注意 `/docs/en/pricing.md` 是 404），OpenAI 是 `developers.openai.com/api/docs/pricing`（`platform.openai.com/docs/pricing` 会 301 过去），xAI 是 `docs.x.ai/docs/pricing`（会 308 到 `docs.x.ai/developers/pricing`）。
+- **价格必须能从官方一手来源核实**，核不到的档位不配、退回标准价；厂商补上文档后要回来补配。同系列相邻版本可能完全不同价，逐行对着目标型号抄。改价时短档和长档（含 `cr`、`cc`）一起改。价目页：
+  - Anthropic：`platform.claude.com/docs/en/about-claude/pricing.md`（`/docs/en/pricing.md` 是 404）
+  - OpenAI：`developers.openai.com/api/docs/pricing`；历史调价看 `developers.openai.com/api/docs/changelog`
+  - xAI：`docs.x.ai/developers/pricing`
+- **加一个模型动 3 处**：`models` + `billing_expr` + `billing_mode`（`tiered_expr`），然后跑 `--check`。
+- **不写 `tags`**（脚本会清掉实例上的标签）。
+- **描述一句话写「定位 + 擅长场景」**，以官方模型页的一句话介绍为准（new-api 上游元数据 `basellm.github.io/llm-metadata/api/newapi/models.json` 可参考句式，但内容要能在官方核实）。型号名看不出档位的先写档位（如「GPT-6 旗舰」「GPT Image 2.5 快速型」）。**不写**「当前 / 上一代 / 旧版」这类会过时的相对说法，不写「最强」「最快」，不写价格、缓存比例、上下文长度。新模型发布时不用改老模型的描述。
+- **`endpoints` 用数组形式**：GPT `["openai", "openai-response"]`，Claude `["anthropic", "openai"]`，Grok `["openai"]`，GPT Image `["image-generation"]`。
+- **只收美元计价的厂商**：系统不做汇率换算，纳入非美元厂商前要先定折算口径。
 
-- **长上下文阈值和边界各家不同**，别套用：GPT 是输入**超过** 272K 才涨（`len <= 272000` 为短档），Grok 是提示词**达到** 200K 就涨（`len < 200000` 为短档，恰好 200,000 属高档），Claude 1M 内不分档。两家都是"整个请求按高档计费"，不是超出部分才涨。
+**有意偏离官方价的自定价**（按决策，别对着价目表"纠正"）：
 
-- **不设模型标签**：按决策 seed 里所有模型都不写 `tags`（省略即空值），脚本会把实例上的标签清掉。新增模型时别顺手补标签。
+| 模型 | 定价 | 说明 |
+|---|---|---|
+| `gpt-5.6-sol` | $5/$30，长档 $10/$45 | 发布价；官方现价 $4/$20 是促销价（至少到 2026-11-21） |
+| `gpt-5.6-luna` | $1/$6，长档 $2/$9 | 发布价；官方 2026-07-30 降到 $0.2/$1.2 |
+| `codex-auto-review` | 跟 `gpt-5.6-sol` 同价 | 不是公开的模型 ID，无官方价可核（[openai/codex#20981](https://github.com/openai/codex/issues/20981)） |
+| `gpt-6-luna` | $0.5/$2.5，长档 $1/$3.75 | 官方价的 5 倍，与 5.6-luna 发布价相对现价的倍数一致；输出**不是** 5.6-luna 的一半而是 5/12 |
+| GPT Image 三个 | 每张 $0.1 | 按张不按请求，别改成 `tier("request", ...)`，否则 `n=4` 只收一张的钱 |
 
-- **模型描述用代际表述**（「当前 / 上一代 / 旧版」），不写死「最强」「最快」这类绝对说法。新一代发布时只需把各档降一级，不用重写整组文案。
-
-- **添加一个模型要动 3 处**：`models` 数组 + `billing_expr` + `billing_mode`（`tiered_expr`）。加完跑 `python3 provision.py --check`。
-
-- **缓存命中价不是全系 0.1x**：Anthropic 从 Fable 5.1 起逐型号单独定命中价——`claude-fable-5-1` 是 **0.025x**（$0.25），`claude-opus-5-5` 是 **0.05x**（$0.2），而 `claude-fable-5`、`claude-opus-5` 仍是 0.1x。新增 Claude 模型时别照抄上一代的 `cr`，去价目表脚注确认那一行的命中价。
-
-- **改价时各档要一起改**：带长上下文档的模型，短档和长档（含 `cr`、`cc`）都要按官方表逐项换，只改一档会让两档对不上。`gpt-5.6-terra` 跟进降价（$2.5/$15 → $2/$12）时就是两档整组同步改的。
-
-- **`gpt-5.6-sol` / `gpt-5.6-luna` 按发布价配，有意不跟官方降价**（2026-09-26 决策，2026-09-24 曾一度改跟现价后撤回）：sol $5/$30（长档 $10/$45），官方现价 $4/$20 是至少持续到 2026-11-21 的促销价；luna $1/$6（长档 $2/$9、命中 $0.1、写入 $1.25），官方 2026-07-30 降价 80% 到 $0.2/$1.2。**别对着价目表把它俩"纠正"成现价**。terra 仍跟官方现价，`codex-auto-review` 跟 sol 同价。`gpt-6-luna` 也是自定价：官方价的 5 倍（$0.5/$2.5，长档 $1/$3.75），与 5.6-luna 发布价相对其现价的倍数一致，从而保持官方两者的比例——输入与缓存是 5.6-luna 的一半，输出**不是一半**而是 5/12，别简单地整体减半。价目页只列现价，历史发布价去 `developers.openai.com/api/docs/changelog` 找调价公告反推。
-
-- **`codex-auto-review` 没有官方定价可核**：官方文档里 Auto-review 是 Codex 的一个功能（`approvals_reviewer = "auto_review"`，由审核子代理代替人工审批），不是公开的模型 ID（[openai/codex#20981](https://github.com/openai/codex/issues/20981) 问过它的计费身份，至今无官方回复）。本仓库按决策让它与 `gpt-5.6-sol` 同价（当前 $5/$30，长档 $10/$45），**这是自定价，不是抄来的官方价**——改它时不必去找官方表，跟着 sol 走即可。注意实际成本取决于渠道把它转发到哪个真实模型，而渠道不在种子范围内。
-
-- **GPT Image 三个模型按张自定价 $0.1**（2026-09-26 决策）：`gpt-image-2.5-sunburst` / `gpt-image-2.5-flare` / `gpt-image-2` 都写 `tier("image", fixed(0.1)) * image_count`，按生成张数计（`image_count` 取请求顶层 `n`，`n=4` 收 $0.4），**不是按请求**——别改成 `tier("request", fixed(0.1))`，那样一次请求能白拿多张图。官方是按 token 计价（文本输入 $5、图片输入 $8、输出 $30），这里是自定价，不必对照官方表。`fixed()` 所在的档不能再加 token 项，`image_count` 只能作乘数。
-
-- `claude-sonnet-5` 的 $2/$10 **已是官方标准价**：原定 2026-09-01 涨到 $3/$15 的计划被 Anthropic 明确取消，不要再按限时价处理。
-
-- **`endpoints` 用数组形式声明协议**：GPT 全系声明 `["openai", "openai-response"]`（官方同时支持 Chat Completions 与 Responses，Codex 走 Responses），Claude 是 `["anthropic", "openai"]`，Grok 是 `["openai"]`，GPT Image 是 `["image-generation"]`。数组形式只供前端展示；定价页的端点由渠道能力推断，只有 map 形式（自定义路径）才会参与。
+`gpt-5.6-terra` 跟官方现价。`claude-sonnet-5` 的 $2/$10 已是官方标准价（原定的涨价被取消）。
 
 ## Git 约定
 
-**直接在 `master` 上提交并推送，不开子分支、不走 PR**。提交信息用简体中文单行标题、无正文，说清改了哪个模型和为什么，例如：
+直接在 `master` 上提交并推送，不开分支、不走 PR。提交信息用简体中文单行标题、无正文，说清改了哪个模型、为什么，例如：
 
 ```
 修正 grok-4.5 缓存命中价：官方为 $0.3，此前误配成 $0.5
