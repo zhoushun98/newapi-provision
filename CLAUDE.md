@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 把一套 new-api 的「供应商 + 模型元信息 + 计费配置」用一条命令灌进任意 new-api 实例。
 
-- `seed.json`：权威数据，日常工作绝大多数是改它。三块：`vendors`（名称 + 图标）、`models`（字段对应 `/api/models/` 的列，**省略即空值**，见 `META_DEFAULTS`）、`pricing`（只有 `billing_setting.billing_expr` 与 `billing_setting.billing_mode` 两张「模型名 → 值」表）。
-- `provision.py`：把 seed 幂等地写进实例。纯标准库，系统 `python3`（3.9+）直接跑，**不要引入 uv / pyproject / 第三方依赖**。
-- `README.md` 面向使用者，也列了模型数量和价格说明，改 seed 时一并更新。`AGENTS.md` 是本文件的软链，只改这里。
+- `seed.json`：权威数据，日常工作绝大多数是改它。三块：`vendors`（名称 + 图标）、`models`（字段对应 `/api/models/` 的列，但 `vendor` 写供应商名称，由脚本换成 `vendor_id`；**省略的字段按 `META_DEFAULTS` 的默认值写回实例，不是保持原样**）、`pricing`（只有 `billing_setting.billing_expr` 与 `billing_setting.billing_mode` 两张「模型名 → 值」表）。
+- `provision.py`：把 seed 幂等地写进实例。纯标准库，用系统 `python3` 直接跑，**不要引入 uv / pyproject / 第三方依赖**。本机系统 Python 是 3.9，别用 `match`、`X | Y` 类型注解等 3.10+ 语法。
+- `README.md` 面向使用者，有分类计数和逐模型的价格说明，改 seed 时同步。`AGENTS.md` 是本文件的软链，只改这里。
 
 目标版本 **new-api v1.0.0-rc.41**（rc.40 也能用，更老的不支持）。
 
@@ -22,7 +22,7 @@ python3 provision.py --base-url http://目标机:3000 --token <访问令牌>    
 # 全新系统加 --reset-pricing：连 seed 之外的模型定价也清空（有破坏性，务必先 --dry-run 看清单）
 ```
 
-访问令牌：目标系统 控制台 → 个人资料 → 访问令牌。必须属于**超级管理员**（`/api/option/*` 走 `RootAuth`）；rc.41 的 `nap_` 令牌按权限授权，要勾选「模型」与「系统设置」的查看 + 编辑（`model:read/write`、`option:read/write`），缺了报 403 `ACCESS_TOKEN_SCOPE_DENIED`。rc.40 的旧令牌在实例升级后 30 天内仍可用。
+访问令牌：目标系统 控制台 → 个人资料 → 访问令牌。必须属于**超级管理员**（`/api/option/*` 走 `RootAuth`）；rc.41 的 `nap_` 令牌按权限授权，要勾选「模型」与「系统设置」的查看 + 编辑（`model:read/write`、`option:read/write`），缺了报 403 `ACCESS_TOKEN_SCOPE_DENIED`；只跑 `--dry-run` 有两个「查看」就够（预览接口只要 `option:read`）。rc.40 的旧令牌在实例升级后 30 天内仍可用。
 
 `--check` 查结构和倍数：每个模型都有表达式且 mode 为 `tiered_expr`、没有旧定价键、没有孤儿键、Claude 每档写全 `cr/cc/cc1h`、缓存写入是输入价的 1.25x / 2x。**价格数字对不对它查不了**；表达式能否编译由 `--dry-run` 调后端预览接口把关。
 
@@ -46,10 +46,10 @@ python3 provision.py --base-url http://目标机:3000 --token <访问令牌>    
 - **网络重试**：urllib 每个请求都新建 TLS 连接，偶有握手被掐或连接被断。`api()` 最多尝试 `NET_RETRIES` 次：请求没发出去（`URLError`）任何方法都重发；已发出但没收到响应的只重发 GET / PUT / 预览，POST 新建和 PATCH 定价直接报错让人重跑（脚本幂等）。
 - **不在范围内**：渠道（含上游密钥）需在实例上手工加。从 seed 删掉的模型和供应商不会从实例删除，定价只有 `--reset-pricing` 才会清。
 
-接口行为以 new-api 源码为准（文档跟不上代码），升级目标版本时拉对应 tag 对照：
+接口行为以 new-api 源码为准（文档跟不上代码），升级目标版本时拉对应 tag 对照。目录名带版本号，免得误用 `/tmp` 里残留的旧版本或克隆失败留下的空目录；只看个别文件可直接取 `https://raw.githubusercontent.com/QuantumNous/new-api/v1.0.0-rc.41/<路径>`：
 
 ```bash
-git clone --depth 1 --branch v1.0.0-rc.41 https://github.com/QuantumNous/new-api.git /tmp/new-api-src
+git clone --depth 1 --branch v1.0.0-rc.41 https://github.com/QuantumNous/new-api.git /tmp/new-api-rc.41
 ```
 
 | 要查的事 | 看哪里 |
@@ -91,10 +91,10 @@ gpt-image-2      tier("image", fixed(0.1)) * image_count
   - Anthropic：`platform.claude.com/docs/en/about-claude/pricing.md`（`/docs/en/pricing.md` 是 404）
   - OpenAI：`developers.openai.com/api/docs/pricing`；历史调价看 `developers.openai.com/api/docs/changelog`
   - xAI：`docs.x.ai/developers/pricing`
-- **加一个模型动 3 处**：`models` + `billing_expr` + `billing_mode`（`tiered_expr`），然后跑 `--check`。
+- **加 / 删一个模型**：seed 里动 3 处——`models` + `billing_expr` + `billing_mode`（`tiered_expr`）。新条目插在同系列相邻型号旁，两张定价表的键序跟 `models` 一致。再同步 README 的分类计数和价格说明，最后跑 `--check`。
 - **不写 `tags`**（脚本会清掉实例上的标签）。
 - **描述一句话写「定位 + 擅长场景」**，以官方模型页的一句话介绍为准（new-api 上游元数据 `basellm.github.io/llm-metadata/api/newapi/models.json` 可参考句式，但内容要能在官方核实）。型号名看不出档位的先写档位（如「GPT-6 旗舰」「GPT Image 2.5 快速型」）。**不写**「当前 / 上一代 / 旧版」这类会过时的相对说法，不写「最强」「最快」，不写价格、缓存比例、上下文长度。新模型发布时不用改老模型的描述。
-- **`endpoints` 用数组形式**：GPT `["openai", "openai-response"]`，Claude `["anthropic", "openai"]`，Grok `["openai"]`，GPT Image `["image-generation"]`。
+- **`endpoints` 用数组形式**：GPT `["openai", "openai-response"]`，Claude `["anthropic", "openai"]`，Grok `["openai"]`，GPT Image `["image-generation"]`。`icon` 跟所属供应商的图标一致。UI 的「转换为计费表达式」只认 map 形式，对这些模型会报 `The model routing configuration could not be verified`，不用管，别为此改成 map（map 是自定义端点路径，会覆盖定价页上该端点类型的全局路径）。
 - **只收美元计价的厂商**：系统不做汇率换算，纳入非美元厂商前要先定折算口径。
 
 **有意偏离官方价的自定价**（按决策，别对着价目表"纠正"）：
