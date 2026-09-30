@@ -103,7 +103,7 @@ gpt-image-2      tier("image", fixed(0.1)) * image_count
 |---|---|---|
 | `gpt-5.6-sol` | $5/$30，长档 $10/$45 | 发布价；官方现价 $4/$20 是促销价（至少到 2026-11-21） |
 | `gpt-5.6-luna` | $1/$6，长档 $2/$9 | 发布价；官方 2026-07-30 降到 $0.2/$1.2 |
-| `codex-auto-review` | 跟 `gpt-5.6-sol` 同价 | 不是公开的模型 ID，无官方价可核（[openai/codex#20981](https://github.com/openai/codex/issues/20981)） |
+| `codex-auto-review` | 跟 `gpt-5.6-terra` 同价 | 不是公开的模型 ID，无官方价可核（[openai/codex#20981](https://github.com/openai/codex/issues/20981)） |
 | `gpt-6-luna` | $0.5/$2.5，长档 $1/$3.75 | 官方价的 5 倍，与 5.6-luna 发布价相对现价的倍数一致；输出**不是** 5.6-luna 的一半而是 5/12 |
 | GPT Image 三个 | 每张 $0.1 | 按张不按请求，别改成 `tier("request", ...)`，否则 `n=4` 只收一张的钱 |
 
