@@ -18,14 +18,17 @@
   python3 provision.py --base-url http://目标机:3000 --token <超级管理员访问令牌> [--user-id 1] [--dry-run]
   python3 provision.py --check      # 只离线校验 seed.json，不连实例
 
-访问令牌：目标系统 控制台 → 个人资料 → 生成访问令牌（定价接口要求超级管理员）。
+访问令牌：目标系统 控制台 → 个人资料 → 访问令牌（定价接口要求超级管理员）。rc.41 起令牌按权限授权，
+需勾选「模型」与「系统设置」的查看 + 编辑；rc.40 的旧令牌在升级后 30 天内仍可用，之后失效。
 """
 
 import argparse
+import http.client
 import json
 import math
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -33,6 +36,9 @@ from pathlib import Path
 # rc.40 已弃用「按 Token（倍率）」「按次」两种旧定价模式，seed 只用计费表达式
 EXPR_KEY, MODE_KEY = "billing_setting.billing_expr", "billing_setting.billing_mode"
 META_DEFAULTS = {"description": "", "icon": "", "tags": "", "endpoints": "", "status": 1, "name_rule": 0}
+NET_RETRIES = 3
+TOKEN_HINT = ("访问令牌须属于超级管理员；rc.41 起令牌按权限授权，需勾选「模型」与「系统设置」的查看 + 编辑"
+              "（model:read / model:write / option:read / option:write）")
 
 
 class ApiError(Exception):
@@ -52,14 +58,32 @@ def api(base, token, user_id, method, path, body=None):
             "New-Api-User": str(user_id),
         },
     )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        raise ApiError(f"HTTP {e.code} {method} {path}: {e.read().decode()[:300]}", e.code)
-    if not data.get("success", False):
-        raise ApiError(f"API 失败 {method} {path}: {data.get('message')}")
-    return data.get("data")
+    # 网络偶发抖动（TLS 握手被掐、连接被对端关闭）时重试。请求没发出去（URLError）任何方法都能重发；
+    # 发出去却没收到响应的只重发可重复的请求，POST 新建与 PATCH 定价可能已经生效，交给用户重跑
+    repeatable = method in ("GET", "PUT") or path.endswith("/preview")
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            msg = f"HTTP {e.code} {method} {path}: {e.read().decode()[:300]}"
+            if e.code == 403:
+                msg += f"\n{TOKEN_HINT}"
+            raise ApiError(msg, e.code)
+        except (urllib.error.URLError, http.client.HTTPException, OSError) as e:
+            sent = not isinstance(e, urllib.error.URLError)
+            if sent and not repeatable:
+                raise ApiError(f"网络错误 {method} {path}: {e}（请求可能已生效；脚本幂等，重跑即可）")
+            if attempt == NET_RETRIES:
+                raise ApiError(f"网络错误 {method} {path}: {e}（共尝试 {NET_RETRIES} 次）")
+            print(f"网络错误，{attempt} 秒后重试 {method} {path}: {e}")
+            time.sleep(attempt)
+            continue
+        if not data.get("success", False):
+            raise ApiError(f"API 失败 {method} {path}: {data.get('message')}")
+        return data.get("data")
 
 
 def check_seed(seed):

@@ -8,7 +8,7 @@
   - 3 个供应商（OpenAI、Anthropic、Grok，含图标）
   - 24 个模型的元信息：名称、供应商归属、图标、简介、端点、匹配类型（不设标签）
   - `pricing`：24 个模型全部用计费表达式（`billing_setting.billing_expr` + `billing_mode`），系数直接是美元价：8 个 OpenAI 文本模型带 272K 长上下文分档，3 个 GPT Image 按张计费（$0.1/张），3 个 Grok 带 200K 分档，10 个 Claude 不分档（含 5 分钟 / 1 小时缓存写入价）
-- `provision.py` — 幂等灌入脚本，标准库实现，无依赖。**要求 new-api v1.0.0-rc.40 及以上**（定价走按模型的 `/api/option/model_pricing` 接口，旧版本会在写入前直接报错退出）
+- `provision.py` — 幂等灌入脚本，标准库实现，无依赖。**要求 new-api v1.0.0-rc.40 及以上**，已对齐 rc.41（定价走按模型的 `/api/option/model_pricing` 接口，旧版本会在写入前直接报错退出）
 
 ## 用法
 
@@ -16,7 +16,8 @@
 # 0. 改完 seed.json 先离线自检（不连实例）
 python3 provision.py --check
 
-# 1. 在目标系统：控制台 → 个人资料 → 生成访问令牌（需超级管理员账号，定价接口只对 root 开放）
+# 1. 在目标系统：控制台 → 个人资料 → 访问令牌（需超级管理员账号，定价接口只对 root 开放）
+#    rc.41 起令牌按权限授权：勾选「模型」与「系统设置」的查看 + 编辑
 # 2. 灌入（先 --dry-run 预览）
 python3 provision.py --base-url http://目标机:3000 --token <访问令牌> --dry-run
 python3 provision.py --base-url http://目标机:3000 --token <访问令牌>
