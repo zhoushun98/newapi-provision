@@ -213,6 +213,15 @@
       "name_rule": 0
     },
     {
+      "model_name": "claude-haiku-5-5",
+      "vendor": "Anthropic",
+      "icon": "Claude.Color",
+      "endpoints": "[\"anthropic\", \"openai\"]",
+      "description": "擅长分类、抽取、路由与子智能体等高并发、低延迟任务",
+      "status": 1,
+      "name_rule": 0
+    },
+    {
       "model_name": "claude-haiku-4-5-20251001",
       "vendor": "Anthropic",
       "icon": "Claude.Color",
@@ -273,6 +282,7 @@
       "claude-sonnet-5-5": "tier(\"standard\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5 + cc1h * 4)",
       "claude-sonnet-5": "tier(\"standard\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5 + cc1h * 4)",
       "claude-sonnet-4-6": "tier(\"standard\", p * 3 + c * 15 + cr * 0.3 + cc * 3.75 + cc1h * 6)",
+      "claude-haiku-5-5": "len <= 100000\n  ? tier(\"standard\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125 + cc1h * 0.2)\n  : tier(\"long_context\", p * 0.5 + c * 2.5 + cr * 0.05 + cc * 0.625 + cc1h * 1)",
       "claude-haiku-4-5-20251001": "tier(\"standard\", p * 1 + c * 5 + cr * 0.1 + cc * 1.25 + cc1h * 2)",
       "grok-4.7": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
       "grok-4.6": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
@@ -301,6 +311,7 @@
       "claude-sonnet-5-5": "tiered_expr",
       "claude-sonnet-5": "tiered_expr",
       "claude-sonnet-4-6": "tiered_expr",
+      "claude-haiku-5-5": "tiered_expr",
       "claude-haiku-4-5-20251001": "tiered_expr",
       "grok-4.7": "tiered_expr",
       "grok-4.6": "tiered_expr",
