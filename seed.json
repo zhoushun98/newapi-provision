@@ -272,7 +272,7 @@
       "grok-4.7": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
       "grok-4.6": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
       "grok-4.5": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.3)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 0.6)",
-      "deepseek-v4.1-flash": "weekday(\"Asia/Shanghai\") >= 1 && weekday(\"Asia/Shanghai\") <= 5 && (hour(\"Asia/Shanghai\") >= 9 && hour(\"Asia/Shanghai\") < 12 || hour(\"Asia/Shanghai\") >= 14 && hour(\"Asia/Shanghai\") < 18)\n  ? tier(\"peak\", p * 2 + c * 8 + cr * 0.04)\n  : tier(\"off_peak\", p * 1 + c * 4 + cr * 0.02)"
+      "deepseek-v4.1-flash": "tier(\"standard\", p * 1 + c * 4 + cr * 0.02)"
     },
     "billing_setting.billing_mode": {
       "gpt-6-astra": "tiered_expr",

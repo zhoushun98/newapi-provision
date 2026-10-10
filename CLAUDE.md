@@ -83,7 +83,7 @@ gpt-image-2      tier("image", fixed(0.1)) * image_count
 
 **长上下文**：整单按高档计费（不是超出部分才涨），阈值边界各家不同——GPT 输入**超过** 272K 才涨（短档 `len <= 272000`），Grok **达到** 200K 就涨（短档 `len < 200000`），Claude 只有 `claude-haiku-5-5` 分档（输入**超过** 100K 才涨，短档 `len <= 100000`；Claude 的 `len` 含缓存读写，与官方口径一致），其余 1M 内不分档。
 
-**峰谷价**（DeepSeek）：高峰为北京时间周一至周五 9:00–12:00、14:00–18:00，空闲半价，用 `weekday("Asia/Shanghai")` / `hour("Asia/Shanghai")` 分 `peak` / `off_peak` 两档。表达式识别不了法定节假日，工作日节假日会按高峰收，接受这个偏差。官方调用名是 `deepseek-flash`，seed 用 `deepseek-v4.1-flash`，靠渠道的模型映射转过去。
+**DeepSeek**：官方调用名是 `deepseek-flash`，seed 用 `deepseek-v4.1-flash`，靠渠道的模型映射转过去。官方分峰谷价，seed 有意全天按空闲价（见下方自定价表）；若要恢复分时段，可用 `weekday("Asia/Shanghai")` / `hour("Asia/Shanghai")` 分两档（识别不了法定节假日）。
 
 **`fixed()`** 是按次 / 按张的完整价格，所在的档不能再加 token 项，只能乘 `image_count`（取请求顶层 `n`）。
 
@@ -108,6 +108,7 @@ gpt-image-2      tier("image", fixed(0.1)) * image_count
 | `gpt-5.6-sol` | $5/$30，长档 $10/$45 | 发布价；官方现价 $4/$20 是促销价（至少到 2026-11-21） |
 | `gpt-5.6-luna` | $1/$6，长档 $2/$9 | 发布价；官方 2026-07-30 降到 $0.2/$1.2 |
 | `claude-sonnet-5-5` | 缓存命中 $0.2（0.1x） | 发布价；官方 2026-10-07 降到 $0.1（0.05x），其余价格跟官方 |
+| `deepseek-v4.1-flash` | 输入 1 / 命中 0.02 / 输出 4（人民币数字） | 全天按国内空闲价；官方高峰时段（北京时间工作日 9–12、14–18 点）是双倍 |
 | `codex-auto-review` | 跟 `gpt-5.6-terra` 同价 | 不是公开的模型 ID，无官方价可核（[openai/codex#20981](https://github.com/openai/codex/issues/20981)） |
 | `gpt-6-luna` | $0.5/$2.5，长档 $1/$3.75 | 官方价的 5 倍，与 5.6-luna 发布价相对现价的倍数一致；输出**不是** 5.6-luna 的一半而是 5/12 |
 | GPT Image 三个 | 每张 $0.1 | 按张不按请求，别改成 `tier("request", ...)`，否则 `n=4` 只收一张的钱 |
