@@ -97,7 +97,8 @@ gpt-image-2      tier("image", fixed(0.1)) * image_count
 - **加 / 删一个模型**：seed 里动 3 处——`models` + `billing_expr` + `billing_mode`（`tiered_expr`）。新条目插在同系列相邻型号旁，两张定价表的键序跟 `models` 一致。再同步 README 的分类计数和价格说明，最后跑 `--check`。
 - **不写 `tags`**（脚本会清掉实例上的标签）。
 - **描述一句话写「定位 + 擅长场景」**，以官方模型页的一句话介绍为准（new-api 上游元数据 `basellm.github.io/llm-metadata/api/newapi/models.json` 可参考句式，但内容要能在官方核实）。型号名看不出档位的先写档位（如「GPT-6 旗舰」「GPT Image 2.5 快速型」）。**不写**「当前 / 上一代 / 旧版」这类会过时的相对说法，不写「最强」「最快」，不写价格、缓存比例、上下文长度。新模型发布时不用改老模型的描述。
-- **`endpoints` 用数组形式**：GPT `["openai", "openai-response"]`，Claude `["anthropic", "openai"]`，Grok `["openai"]`，DeepSeek `["openai", "openai-response", "anthropic"]`，GPT Image `["image-generation"]`。`icon` 跟所属供应商的图标一致。UI 的「转换为计费表达式」只认 map 形式，对这些模型会报 `The model routing configuration could not be verified`，不用管，别为此改成 map（map 是自定义端点路径，会覆盖定价页上该端点类型的全局路径）。
+- **不写 `endpoints`**（脚本会清掉实例上的自定义端点）。rc.41 定价页的可用端点按渠道类型自动推断（`model/pricing.go`）；`endpoints` 只认 map 形式的自定义路径（会覆盖该端点类型的全局路径），数组形式解析失败直接被忽略，写了也没用。
+- **`icon`** 跟所属供应商的图标一致。
 - **币种**：系统不做汇率换算。OpenAI / Anthropic / xAI 填美元价；DeepSeek 按决策**把国内人民币价的数字直接当美元填**（不折算，额度消耗约为美元口径的 7 倍），别"纠正"成美元价或折算价。再纳入其他非美元厂商前先问清口径。
 
 **有意偏离官方价的自定价**（按决策，别对着价目表"纠正"）：
