@@ -83,6 +83,8 @@ gpt-image-2      tier("image", fixed(0.1)) * image_count
 
 **长上下文**：整单按高档计费（不是超出部分才涨），阈值边界各家不同——GPT 输入**超过** 272K 才涨（短档 `len <= 272000`），Grok **达到** 200K 就涨（短档 `len < 200000`），Claude 只有 `claude-haiku-5-5` 分档（输入**超过** 100K 才涨，短档 `len <= 100000`；Claude 的 `len` 含缓存读写，与官方口径一致），其余 1M 内不分档。
 
+**峰谷价**（DeepSeek）：高峰为北京时间周一至周五 9:00–12:00、14:00–18:00，空闲半价，用 `weekday("Asia/Shanghai")` / `hour("Asia/Shanghai")` 分 `peak` / `off_peak` 两档。表达式识别不了法定节假日，工作日节假日会按高峰收，接受这个偏差。官方调用名是 `deepseek-flash`，seed 用 `deepseek-v4.1-flash`，靠渠道的模型映射转过去。
+
 **`fixed()`** 是按次 / 按张的完整价格，所在的档不能再加 token 项，只能乘 `image_count`（取请求顶层 `n`）。
 
 ## 数据纪律
@@ -91,11 +93,12 @@ gpt-image-2      tier("image", fixed(0.1)) * image_count
   - Anthropic：`platform.claude.com/docs/en/about-claude/pricing.md`（`/docs/en/pricing.md` 是 404）
   - OpenAI：`developers.openai.com/api/docs/pricing`；历史调价看 `developers.openai.com/api/docs/changelog`
   - xAI：`docs.x.ai/developers/pricing`
+  - DeepSeek：`api-docs.deepseek.com/zh-cn/quick_start/pricing`（国内人民币价；英文页是美元价，不用）；发布公告在 `api-docs.deepseek.com/zh-cn/news/`
 - **加 / 删一个模型**：seed 里动 3 处——`models` + `billing_expr` + `billing_mode`（`tiered_expr`）。新条目插在同系列相邻型号旁，两张定价表的键序跟 `models` 一致。再同步 README 的分类计数和价格说明，最后跑 `--check`。
 - **不写 `tags`**（脚本会清掉实例上的标签）。
 - **描述一句话写「定位 + 擅长场景」**，以官方模型页的一句话介绍为准（new-api 上游元数据 `basellm.github.io/llm-metadata/api/newapi/models.json` 可参考句式，但内容要能在官方核实）。型号名看不出档位的先写档位（如「GPT-6 旗舰」「GPT Image 2.5 快速型」）。**不写**「当前 / 上一代 / 旧版」这类会过时的相对说法，不写「最强」「最快」，不写价格、缓存比例、上下文长度。新模型发布时不用改老模型的描述。
-- **`endpoints` 用数组形式**：GPT `["openai", "openai-response"]`，Claude `["anthropic", "openai"]`，Grok `["openai"]`，GPT Image `["image-generation"]`。`icon` 跟所属供应商的图标一致。UI 的「转换为计费表达式」只认 map 形式，对这些模型会报 `The model routing configuration could not be verified`，不用管，别为此改成 map（map 是自定义端点路径，会覆盖定价页上该端点类型的全局路径）。
-- **只收美元计价的厂商**：系统不做汇率换算，纳入非美元厂商前要先定折算口径。
+- **`endpoints` 用数组形式**：GPT `["openai", "openai-response"]`，Claude `["anthropic", "openai"]`，Grok `["openai"]`，DeepSeek `["openai", "openai-response", "anthropic"]`，GPT Image `["image-generation"]`。`icon` 跟所属供应商的图标一致。UI 的「转换为计费表达式」只认 map 形式，对这些模型会报 `The model routing configuration could not be verified`，不用管，别为此改成 map（map 是自定义端点路径，会覆盖定价页上该端点类型的全局路径）。
+- **币种**：系统不做汇率换算。OpenAI / Anthropic / xAI 填美元价；DeepSeek 按决策**把国内人民币价的数字直接当美元填**（不折算，额度消耗约为美元口径的 7 倍），别"纠正"成美元价或折算价。再纳入其他非美元厂商前先问清口径。
 
 **有意偏离官方价的自定价**（按决策，别对着价目表"纠正"）：
 

@@ -11,6 +11,10 @@
     {
       "name": "Grok",
       "icon": "Grok"
+    },
+    {
+      "name": "DeepSeek",
+      "icon": "DeepSeek.Color"
     }
   ],
   "models": [
@@ -256,6 +260,15 @@
       "description": "擅长智能体编码与工程任务",
       "status": 1,
       "name_rule": 0
+    },
+    {
+      "model_name": "deepseek-v4.1-flash",
+      "vendor": "DeepSeek",
+      "icon": "DeepSeek.Color",
+      "endpoints": "[\"openai\", \"openai-response\", \"anthropic\"]",
+      "description": "DeepSeek 新架构系列轻量型，原生支持图像理解，适合推理与智能体编码",
+      "status": 1,
+      "name_rule": 0
     }
   ],
   "pricing": {
@@ -286,7 +299,8 @@
       "claude-haiku-4-5-20251001": "tier(\"standard\", p * 1 + c * 5 + cr * 0.1 + cc * 1.25 + cc1h * 2)",
       "grok-4.7": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
       "grok-4.6": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.5)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 1)",
-      "grok-4.5": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.3)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 0.6)"
+      "grok-4.5": "len < 200000\n  ? tier(\"standard\", p * 2 + c * 6 + cr * 0.3)\n  : tier(\"long_context\", p * 4 + c * 12 + cr * 0.6)",
+      "deepseek-v4.1-flash": "weekday(\"Asia/Shanghai\") >= 1 && weekday(\"Asia/Shanghai\") <= 5 && (hour(\"Asia/Shanghai\") >= 9 && hour(\"Asia/Shanghai\") < 12 || hour(\"Asia/Shanghai\") >= 14 && hour(\"Asia/Shanghai\") < 18)\n  ? tier(\"peak\", p * 2 + c * 8 + cr * 0.04)\n  : tier(\"off_peak\", p * 1 + c * 4 + cr * 0.02)"
     },
     "billing_setting.billing_mode": {
       "gpt-6-astra": "tiered_expr",
@@ -315,7 +329,8 @@
       "claude-haiku-4-5-20251001": "tiered_expr",
       "grok-4.7": "tiered_expr",
       "grok-4.6": "tiered_expr",
-      "grok-4.5": "tiered_expr"
+      "grok-4.5": "tiered_expr",
+      "deepseek-v4.1-flash": "tiered_expr"
     }
   }
 }
